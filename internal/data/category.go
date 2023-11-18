@@ -12,6 +12,7 @@ type Category struct {
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Image       string `json:"image"`
 }
 
 type CategoryModel struct {
@@ -26,13 +27,14 @@ func ValidateCategory(v *validator.Validator, category *Category) {
 
 func (c CategoryModel) Insert(category *Category) error {
 	query := `
-	INSERT INTO categories (name, description)
-	VALUES ($1, $2)
+	INSERT INTO categories (name, description, image)
+	VALUES ($1, $2, $3)
 	RETURNING id`
 
 	args := []any{
 		category.Name,
 		category.Description,
+		category.Image,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -48,7 +50,7 @@ func (c CategoryModel) Insert(category *Category) error {
 }
 
 func (c CategoryModel) GetAll() ([]*Category, error) {
-	query := `SELECT count(*) OVER(), id, name, description FROM categories`
+	query := `SELECT count(*) OVER(), id, name, description, image FROM categories`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
@@ -72,6 +74,7 @@ func (c CategoryModel) GetAll() ([]*Category, error) {
 			&category.ID,
 			&category.Name,
 			&category.Description,
+			&category.Image,
 		)
 		if err != nil {
 			return nil, err // Update this to return an empty Metadata struct.
@@ -91,7 +94,7 @@ func (c CategoryModel) Get(id int64) (*Category, error) {
 	}
 	// Define the SQL query for retrieving the movie data.
 	query := `
-		SELECT id, name, description
+		SELECT id, name, description, image
 		FROM categories
 		WHERE id = $1`
 	// Declare a Movie struct to hold the data returned by the query.
@@ -100,6 +103,7 @@ func (c CategoryModel) Get(id int64) (*Category, error) {
 		&category.ID,
 		&category.Name,
 		&category.Description,
+		&category.Image,
 	)
 	if err != nil {
 		switch {
@@ -114,13 +118,14 @@ func (c CategoryModel) Get(id int64) (*Category, error) {
 
 func (c CategoryModel) Update(category *Category) error {
 	query := `UPDATE categories
-	SET name = $1, description = $2
-	WHERE id = $3
+	SET name = $1, description = $2, image = $3
+	WHERE id = $4
 	RETURNING id`
 
 	args := []any{
 		category.Name,
 		category.Description,
+		category.Image,
 		category.ID,
 	}
 

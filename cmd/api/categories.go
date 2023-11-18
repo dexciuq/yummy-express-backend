@@ -11,6 +11,7 @@ func (app *application) addCategoryHandler(w http.ResponseWriter, r *http.Reques
 	var input struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		Image       string `json:"image"`
 	}
 
 	err := app.readJSON(w, r, &input)
@@ -22,6 +23,7 @@ func (app *application) addCategoryHandler(w http.ResponseWriter, r *http.Reques
 	category := &data.Category{
 		Name:        input.Name,
 		Description: input.Description,
+		Image:       input.Image,
 	}
 
 	v := validator.New()
@@ -99,6 +101,7 @@ func (app *application) updateCategoryHandler(w http.ResponseWriter, r *http.Req
 	var input struct {
 		Name        *string `json:"name"`
 		Description *string `json:"description"`
+		Image       *string `json:"image"`
 	}
 
 	err = app.readJSON(w, r, &input)
@@ -113,6 +116,10 @@ func (app *application) updateCategoryHandler(w http.ResponseWriter, r *http.Req
 
 	if input.Description != nil {
 		category.Description = *input.Description
+	}
+
+	if input.Image != nil {
+		category.Image = *input.Image
 	}
 
 	v := validator.New()
