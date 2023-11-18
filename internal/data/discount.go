@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
 )
@@ -13,7 +12,7 @@ type Discount struct {
 	ID              int64     `json:"id"`
 	Name            string    `json:"name"`
 	Description     string    `json:"description"`
-	DiscountPercent float64   `json:"discount_percent"`
+	DiscountPercent int       `json:"discount_percent"`
 	CreatedAt       time.Time `json:"created_at"`
 	StartedAt       time.Time `json:"started_at"`
 	EndedAt         time.Time `json:"ended_at"`
@@ -56,25 +55,19 @@ func (d DiscountModel) Insert(discount *Discount) error {
 	return nil
 }
 
-func (d DiscountModel) GetAll(name string, category string, filters Filters) ([]*Discount, Metadata, error) {
+func (d DiscountModel) GetAll() ([]*Discount, error) {
 	// Update the SQL query to include the window function which counts the total
 	// (filtered) records.
-	query := fmt.Sprintf(`
-		SELECT count(*) OVER(), id, name, description, discount_percent, created_at, started_at, ended_at
-		FROM discounts
-		WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '')
-		ORDER BY %s %s, id ASC
-		LIMIT $2 OFFSET $3`, filters.sortColumn(), filters.sortDirection())
+	query := `SELECT id, name, description, discount_percent, created_at, started_at, ended_at
+		FROM discounts`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	defer cancel()
 
-	args := []any{name, filters.limit(), filters.offset()}
-
-	rows, err := d.DB.QueryContext(ctx, query, args...)
+	rows, err := d.DB.QueryContext(ctx, query)
 	if err != nil {
-		return nil, Metadata{}, err // Update this to return an empty Metadata struct.
+		return nil, err // Update this to return an empty Metadata struct.
 	}
 
 	defer rows.Close()
@@ -96,19 +89,15 @@ func (d DiscountModel) GetAll(name string, category string, filters Filters) ([]
 			&discount.EndedAt,
 		)
 		if err != nil {
-			return nil, Metadata{}, err // Update this to return an empty Metadata struct.
+			return nil, err // Update this to return an empty Metadata struct.
 		}
 		discounts = append(discounts, &discount)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, Metadata{}, err // Update this to return an empty Metadata struct.
+		return nil, err // Update this to return an empty Metadata struct.
 	}
-	// Generate a Metadata struct, passing in the total record count and pagination
-	// parameters from the client.
-	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
-	// Include the metadata struct when returning.
-	return discounts, metadata, nil
+	return discounts, nil
 }
 
 func (d DiscountModel) Get(id int64) (*Discount, error) {
