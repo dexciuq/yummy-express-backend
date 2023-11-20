@@ -14,8 +14,8 @@ func (app *application) addProductHandler(w http.ResponseWriter, r *http.Request
 		Description string  `json:"description"`
 		CategoryID  int64   `json:"category_id"`
 		UPC         string  `json:"upc"`
-		DiscountID  string  `json:"-"`
-		Quantity    int64   `json:"-"`
+		DiscountID  string  `json:"discount_id"`
+		Quantity    int64   `json:"quantity"`
 		UnitID      int64   `json:"unit_id"`
 		Image       string  `json:"image"`
 		BrandID     int64   `json:"brand_id"`
