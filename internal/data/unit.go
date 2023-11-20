@@ -148,3 +148,27 @@ func (u UnitModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (u UnitModel) Init() error {
+	var count int
+	err := u.DB.QueryRow("SELECT COUNT(*) FROM units").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		units := []*Unit{
+			{Name: "kg", Description: "Unit of mass, one of the seven basic units of the International System of Units (SI)."},
+			{Name: "pcs", Description: "Pieces, a unit of count."},
+		}
+
+		for _, unit := range units {
+			err := u.Insert(unit)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
