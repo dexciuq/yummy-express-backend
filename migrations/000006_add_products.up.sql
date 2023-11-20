@@ -12,7 +12,7 @@ CREATE TABLE if not exists products (
     unit_id bigint,
     brand_id bigint,
     country_id bigint,
-    step double precison,
+    step double precision,
     CONSTRAINT category_id FOREIGN KEY (category_id)
         REFERENCES categories (id) MATCH SIMPLE
         ON UPDATE NO ACTION
