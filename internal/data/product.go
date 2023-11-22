@@ -27,6 +27,39 @@ type Product struct {
 	Version     int       `json:"-"`
 }
 
+type productDB struct {
+	ID                  int64     `json:"id"`
+	Name                string    `json:"name"`
+	Price               int64     `json:"price"`
+	Description         string    `json:"description"`
+	UPC                 string    `json:"upc"`
+	Quantity            int64     `json:"quantity"`
+	Image               string    `json:"image"`
+	Step                float64   `json:"step"`
+	CategoryID          int64     `json:"category_id"`
+	CategoryName        string    `json:"category_name"`
+	CategoryDescription string    `json:"category_description"`
+	CategoryImage       string    `json:"category_image"`
+	DiscountID          int64     `json:"discount_id"`
+	DiscountName        string    `json:"discount_name"`
+	DiscountDescription string    `json:"discount_description"`
+	DiscountPercent     int       `json:"discount_percent"`
+	DiscountCreatedAt   time.Time `json:"discount_created_at"`
+	DiscountStartedAt   time.Time `json:"discount_started_at"`
+	DiscountEndedAt     time.Time `json:"discount_ended_at"`
+	UnitID              int64     `json:"unit_id"`
+	UnitName            string    `json:"unit_name"`
+	UnitDescription     string    `json:"unit_description"`
+	BrandID             int64     `json:"brand_id"`
+	BrandName           string    `json:"brand_name"`
+	BrandDescription    string    `json:"brand_description"`
+	CountryID           int64     `json:"country_id"`
+	CountryName         string    `json:"country_name"`
+	CountryDescription  string    `json:"country_description"`
+	Alpha2              string    `json:"alpha2"`
+	Alpha3              string    `json:"alpha3"`
+}
+
 type ProductModel struct {
 	DB *sql.DB
 }
@@ -73,16 +106,27 @@ func (p ProductModel) Insert(product *Product) error {
 	return nil
 }
 
-func (p ProductModel) GetAll(category int, brand int, country int, filters Filters) ([]*Product, Metadata, error) {
+func (p ProductModel) GetAll(category int, brand int, country int, filters Filters) ([]*productDB, Metadata, error) {
 	// Update the SQL query to include the window function which counts the total
 	// (filtered) records.
 	query := fmt.Sprintf(`
-		SELECT count(*) OVER(), id, name, price, description, category_id, upc, discount_id, quantity, unit_id, image, brand_id, country_id, step
+		SELECT count(*) OVER(), 
+			products.id, products.name, products.price, products.description, products.upc, products.quantity, products.image, products.step,
+			categories.id, categories.name, categories.description, categories.image, 
+			discounts.id, discounts.name, discounts.description, discounts.discount_percent, discounts.created_at, discounts.started_at, discounts.ended_at,
+			units.id, units.name, units.description,
+			brands.id, brands.name, brands.description,
+			countries.id, countries.name, countries.description, countries.alpha2, countries.alpha3
 		FROM products
-		WHERE (category_id = $1 OR $1 = 0)
-		AND (brand_id = $2 OR $2 = 0)
-		AND (country_id = $3 OR $3 = 0)
-		ORDER BY %s %s, id ASC
+	    LEFT JOIN categories ON products.category_id = categories.id
+		LEFT JOIN discounts ON products.discount_id = discounts.id
+		LEFT JOIN units ON products.unit_id = units.id
+		LEFT JOIN brands ON products.brand_id = brands.id
+		LEFT JOIN countries ON products.country_id = countries.id
+		WHERE (products.category_id = $1 OR $1 = 0)
+		AND (products.brand_id = $2 OR $2 = 0)
+		AND (products.country_id = $3 OR $3 = 0)
+		ORDER BY %s %s, products.id ASC
 		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -100,25 +144,42 @@ func (p ProductModel) GetAll(category int, brand int, country int, filters Filte
 
 	totalRecords := 0
 
-	var products []*Product
+	var products []*productDB
 
 	for rows.Next() {
-		var product Product
+		var product productDB
 		err := rows.Scan(
 			&totalRecords, // Scan the count from the window function into totalRecords.
 			&product.ID,
 			&product.Name,
 			&product.Price,
 			&product.Description,
-			&product.CategoryID,
 			&product.UPC,
-			&product.DiscountID,
 			&product.Quantity,
-			&product.UnitID,
 			&product.Image,
-			&product.BrandID,
-			&product.CountryID,
 			&product.Step,
+			&product.CategoryID,
+			&product.CategoryName,
+			&product.CategoryDescription,
+			&product.CategoryImage,
+			&product.DiscountID,
+			&product.DiscountName,
+			&product.DiscountDescription,
+			&product.DiscountPercent,
+			&product.DiscountCreatedAt,
+			&product.DiscountStartedAt,
+			&product.DiscountEndedAt,
+			&product.UnitID,
+			&product.UnitName,
+			&product.UnitDescription,
+			&product.BrandID,
+			&product.BrandName,
+			&product.BrandDescription,
+			&product.CountryID,
+			&product.CountryName,
+			&product.CountryDescription,
+			&product.Alpha2,
+			&product.Alpha3,
 		)
 		if err != nil {
 			return nil, Metadata{}, err // Update this to return an empty Metadata struct.
@@ -161,6 +222,70 @@ func (p ProductModel) Get(id int64) (*Product, error) {
 		&product.BrandID,
 		&product.CountryID,
 		&product.Step,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &product, nil
+}
+
+func (p ProductModel) GetDB(id int64) (*productDB, error) {
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	// Define the SQL query for retrieving the movie data.
+	query := `
+		SELECT products.id, products.name, products.price, products.description, products.upc, products.quantity, products.image, products.step,
+			categories.id, categories.name, categories.description, categories.image, 
+			discounts.id, discounts.name, discounts.description, discounts.discount_percent, discounts.created_at, discounts.started_at, discounts.ended_at,
+			units.id, units.name, units.description,
+			brands.id, brands.name, brands.description,
+			countries.id, countries.name, countries.description, countries.alpha2, countries.alpha3
+		FROM products
+	    LEFT JOIN categories ON products.category_id = categories.id
+		LEFT JOIN discounts ON products.discount_id = discounts.id
+		LEFT JOIN units ON products.unit_id = units.id
+		LEFT JOIN brands ON products.brand_id = brands.id
+		LEFT JOIN countries ON products.country_id = countries.id
+		WHERE products.id = $1`
+	// Declare a Movie struct to hold the data returned by the query.
+	var product productDB
+	err := p.DB.QueryRow(query, id).Scan(
+		&product.ID,
+		&product.Name,
+		&product.Price,
+		&product.Description,
+		&product.UPC,
+		&product.Quantity,
+		&product.Image,
+		&product.Step,
+		&product.CategoryID,
+		&product.CategoryName,
+		&product.CategoryDescription,
+		&product.CategoryImage,
+		&product.DiscountID,
+		&product.DiscountName,
+		&product.DiscountDescription,
+		&product.DiscountPercent,
+		&product.DiscountCreatedAt,
+		&product.DiscountStartedAt,
+		&product.DiscountEndedAt,
+		&product.UnitID,
+		&product.UnitName,
+		&product.UnitDescription,
+		&product.BrandID,
+		&product.BrandName,
+		&product.BrandDescription,
+		&product.CountryID,
+		&product.CountryName,
+		&product.CountryDescription,
+		&product.Alpha2,
+		&product.Alpha3,
 	)
 	if err != nil {
 		switch {

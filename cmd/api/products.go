@@ -104,7 +104,7 @@ func (app *application) showProductHandler(w http.ResponseWriter, r *http.Reques
 		app.notFoundResponse(w, r)
 	}
 
-	product, err := app.models.Products.Get(id)
+	product, err := app.models.Products.GetDB(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
