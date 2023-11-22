@@ -158,3 +158,49 @@ func (c CountryModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (c CountryModel) Init() error {
+	var count int
+	err := c.DB.QueryRow("SELECT COUNT(*) FROM countries").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		countries := []*Country{
+			{
+				Name:        "Kazakhstan",
+				Description: "Country in Central Asia",
+				Alpha2:      "KZ",
+				Alpha3:      "KAZ",
+			},
+			{
+				Name:        "Russia",
+				Description: "Largest country in the world",
+				Alpha2:      "RU",
+				Alpha3:      "RUS",
+			},
+			{
+				Name:        "United States",
+				Description: "Powerful nation in North America",
+				Alpha2:      "US",
+				Alpha3:      "USA",
+			},
+			{
+				Name:        "China",
+				Description: "World's most populous country",
+				Alpha2:      "CN",
+				Alpha3:      "CHN",
+			},
+		}
+
+		for _, country := range countries {
+			err := c.Insert(country)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

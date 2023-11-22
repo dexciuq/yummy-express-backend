@@ -16,7 +16,7 @@ type Product struct {
 	Description string    `json:"description"`
 	CategoryID  int64     `json:"category_id"`
 	UPC         string    `json:"upc"`
-	DiscountID  string    `json:"discount_id"`
+	DiscountID  int64     `json:"discount_id"`
 	Quantity    int64     `json:"quantity"`
 	UnitID      int64     `json:"unit_id"`
 	Image       string    `json:"image"`
@@ -83,7 +83,7 @@ func (p ProductModel) GetAll(category int, brand int, country int, filters Filte
 		AND (brand_id = $2 OR $2 = 0)
 		AND (country_id = $3 OR $3 = 0)
 		ORDER BY %s %s, id ASC
-		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
+		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
@@ -100,7 +100,7 @@ func (p ProductModel) GetAll(category int, brand int, country int, filters Filte
 
 	totalRecords := 0
 
-	products := []*Product{}
+	var products []*Product
 
 	for rows.Next() {
 		var product Product
@@ -217,5 +217,69 @@ func (p ProductModel) Delete(id int64) error {
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
+	return nil
+}
+
+func (p ProductModel) Init() error {
+	var count int
+	err := p.DB.QueryRow("SELECT COUNT(*) FROM products").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		products := []*Product{
+			{
+				Name:        "Fresh Peach",
+				Price:       65000,
+				Description: "Sweet and juicy peaches, perfect for a refreshing and healthy snack. Enjoy the natural goodness of ripe peaches, known for their vibrant flavor and nutritional benefits. Add them to your fruit salads, desserts, or enjoy them on their own for a delightful taste of summer.",
+				CategoryID:  2,
+				UPC:         "123123",
+				DiscountID:  1,
+				Quantity:    10,
+				UnitID:      1,
+				Image:       "https://pngfre.com/wp-content/uploads/peach-png-image-from-pngfre-33-1024x815.png", // url
+				BrandID:     1,
+				CountryID:   1,
+				Step:        1.0,
+			},
+			{
+				Name:        "Lemon",
+				Price:       23000,
+				Description: "Bright and zesty lemons, known for their tangy flavor and versatility. Fresh lemons are a kitchen essential, perfect for adding a burst of citrusy goodness to both sweet and savory dishes. Whether you're making lemonade, salad dressings, desserts, or savory meals, fresh lemons bring a refreshing twist to your culinary creations.",
+				CategoryID:  2,
+				UPC:         "1231231",
+				DiscountID:  1,
+				Quantity:    8,
+				UnitID:      1,
+				Image:       "https://pngimg.com/d/lemon_PNG25198.png",
+				BrandID:     1,
+				CountryID:   1,
+				Step:        1.0,
+			},
+			{
+				Name:        "Cucumber",
+				Price:       23000,
+				Description: "Crunchy and hydrating cucumbers, prized for their refreshing taste and versatility. Fresh cucumbers are a low-calorie, nutrient-packed addition to your meals. Enjoy them sliced in salads, pickled for a tangy snack, or add a crisp touch to your water. With their high water content, cucumbers are perfect for staying hydrated while savoring a delightful, cool crunch.",
+				CategoryID:  3,
+				UPC:         "12312312",
+				DiscountID:  1,
+				Quantity:    12,
+				UnitID:      1,
+				Image:       "https://pngimg.com/d/cucumber_PNG12602.png",
+				BrandID:     1,
+				CountryID:   1,
+				Step:        1.0,
+			},
+		}
+
+		for _, product := range products {
+			err := p.Insert(product)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

@@ -148,3 +148,49 @@ func (b BrandModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (b BrandModel) Init() error {
+	var count int
+	err := b.DB.QueryRow("SELECT COUNT(*) FROM brands").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		brands := []*Brand{
+			{
+				Name:        "ASI Mart",
+				Description: "The closest market",
+			},
+			{
+				Name:        "Coca-Cola",
+				Description: "Beverage company known for its soft drinks.",
+			},
+			{
+				Name:        "Nestlé",
+				Description: "Multinational food and beverage company.",
+			},
+			{
+				Name:        "PepsiCo",
+				Description: "Global food and beverage company.",
+			},
+			{
+				Name:        "Kellogg's",
+				Description: "Producer of cereal and convenience foods.",
+			},
+			{
+				Name:        "Unilever",
+				Description: "British-Dutch multinational consumer goods company.",
+			},
+		}
+
+		for _, brand := range brands {
+			err := b.Insert(brand)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

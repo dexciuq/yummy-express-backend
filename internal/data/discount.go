@@ -171,3 +171,53 @@ func (d DiscountModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (d DiscountModel) Init() error {
+	var count int
+	err := d.DB.QueryRow("SELECT COUNT(*) FROM discounts").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		discounts := []*Discount{
+			{
+				Name:            "0% discount",
+				Description:     "0",
+				DiscountPercent: 0,
+				StartedAt:       time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+				EndedAt:         time.Date(2050, time.December, 31, 23, 59, 59, 999999999, time.UTC),
+			},
+			{
+				Name:            "15% discount",
+				Description:     "Special discount for the holiday season",
+				DiscountPercent: 15,
+				StartedAt:       time.Date(2023, time.November, 1, 0, 0, 0, 0, time.UTC),
+				EndedAt:         time.Date(2023, time.December, 31, 23, 59, 59, 999999999, time.UTC),
+			},
+			{
+				Name:            "10% discount",
+				Description:     "Back-to-school promotion",
+				DiscountPercent: 10,
+				StartedAt:       time.Date(2023, time.November, 1, 0, 0, 0, 0, time.UTC),
+				EndedAt:         time.Date(2023, time.December, 31, 23, 59, 59, 999999999, time.UTC),
+			},
+			{
+				Name:            "5% discount",
+				Description:     "End-of-year clearance sale",
+				DiscountPercent: 5,
+				StartedAt:       time.Date(2023, time.November, 1, 0, 0, 0, 0, time.UTC),
+				EndedAt:         time.Date(2023, time.December, 31, 23, 59, 59, 999999999, time.UTC),
+			},
+		}
+
+		for _, discount := range discounts {
+			err := d.Insert(discount)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

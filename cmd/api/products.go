@@ -14,7 +14,7 @@ func (app *application) addProductHandler(w http.ResponseWriter, r *http.Request
 		Description string  `json:"description"`
 		CategoryID  int64   `json:"category_id"`
 		UPC         string  `json:"upc"`
-		DiscountID  string  `json:"discount_id"`
+		DiscountID  int64   `json:"discount_id"`
 		Quantity    int64   `json:"quantity"`
 		UnitID      int64   `json:"unit_id"`
 		Image       string  `json:"image"`
@@ -146,7 +146,7 @@ func (app *application) updateProductHandler(w http.ResponseWriter, r *http.Requ
 		Description *string  `json:"description"`
 		CategoryID  *int64   `json:"category_id"`
 		UPC         *string  `json:"upc"`
-		DiscountID  *string  `json:"-"`
+		DiscountID  *int64   `json:"-"`
 		Quantity    *int64   `json:"-"`
 		UnitID      *int64   `json:"unit_id"`
 		Image       *string  `json:"image"`

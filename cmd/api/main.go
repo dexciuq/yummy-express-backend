@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/jsonlog"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -46,17 +45,11 @@ func getEnvVar(key string) string {
 
 func main() {
 	var cfg config
-	port := os.Getenv("PORT")
-	if port == "" {
-		fmt.Println("Empty")
-		port = "7000"
-	}
-	port_int, err := strconv.Atoi(port)
-	flag.IntVar(&cfg.port, "port", port_int, "API server port")
+	flag.IntVar(&cfg.port, "port", 8080, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
 	// GetById the database connection string, aka data source name (DSN)
-	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://postgres:nurdaulet@localhost/Diplom?sslmode=disable", "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://postgres:0000@localhost/yummy-express?sslmode=disable", "PostgreSQL DSN")
 
 	// Set up restrictions for the database connections
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -84,6 +77,14 @@ func main() {
 		logger: logger,
 		models: data.NewModels(db),
 	}
+
+	// init
+	app.models.Units.Init()
+	app.models.Discount.Init()
+	app.models.Brands.Init()
+	app.models.Country.Init()
+	app.models.Category.Init()
+	app.models.Products.Init()
 
 	err = app.serve()
 	if err != nil {
