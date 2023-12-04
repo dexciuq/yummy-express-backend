@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
+	"github.com/lib/pq"
 	"time"
 )
 
@@ -106,7 +107,7 @@ func (p ProductModel) Insert(product *Product) error {
 	return nil
 }
 
-func (p ProductModel) GetAll(category int, brand int, country int, filters Filters) ([]*productDB, Metadata, error) {
+func (p ProductModel) GetAll(category int, brand []int, country int, name string, filters Filters) ([]*productDB, Metadata, error) {
 	// Update the SQL query to include the window function which counts the total
 	// (filtered) records.
 	query := fmt.Sprintf(`
@@ -123,17 +124,18 @@ func (p ProductModel) GetAll(category int, brand int, country int, filters Filte
 		LEFT JOIN units ON products.unit_id = units.id
 		LEFT JOIN brands ON products.brand_id = brands.id
 		LEFT JOIN countries ON products.country_id = countries.id
-		WHERE (products.category_id = $1 OR $1 = 0)
-		AND (products.brand_id = $2 OR $2 = 0)
-		AND (products.country_id = $3 OR $3 = 0)
+		WHERE LOWER(products.name) LIKE LOWER($1)/*(to_tsvector('simple', products.name) @@ plainto_tsquery('simple', $1) OR $1 = '')*/
+		AND (products.category_id = $2 OR $2 = 0)
+  		AND (brand_id = ANY($3) OR COALESCE(array_length($3, 1), 0) = 0)
+		AND (products.country_id = $4 OR $4 = 0)
 		ORDER BY %s %s, products.id ASC
-		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortDirection())
+		LIMIT $5 OFFSET $6`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	defer cancel()
 
-	args := []any{category, brand, country, filters.limit(), filters.offset()}
+	args := []any{"%" + name + "%", category, pq.Array(brand), country, filters.limit(), filters.offset()}
 
 	rows, err := p.DB.QueryContext(ctx, query, args...)
 	if err != nil {

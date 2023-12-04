@@ -85,6 +85,22 @@ func (app *application) readString(qs url.Values, key string, defaultValue strin
 	return s
 }
 
+func (app *application) readIntArray(qs url.Values, key string, defaultValue []int) []int {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+	ids := strings.Split(s, ",")
+	var result []int
+	for _, id := range ids {
+		elem, err := strconv.Atoi(id)
+		if err == nil {
+			result = append(result, elem)
+		}
+	}
+	return result
+}
+
 func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string {
 	csv := qs.Get(key)
 	if csv == "" {

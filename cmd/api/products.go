@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"net/http"
@@ -65,14 +66,17 @@ func (app *application) addProductHandler(w http.ResponseWriter, r *http.Request
 func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		CategoryID int
-		BrandID    int
+		BrandIDs   []int
 		CountryID  int
+		Name       string
 		data.Filters
 	}
 	// v := validator.New()
 	qs := r.URL.Query()
+	input.Name = app.readString(qs, "name", "")
+	fmt.Println(input.Name)
 	input.CategoryID = app.readInt(qs, "category", 0)
-	input.BrandID = app.readInt(qs, "brand", 0)
+	input.BrandIDs = app.readIntArray(qs, "brand", []int{})
 	input.CountryID = app.readInt(qs, "country", 0)
 	input.Filters.Page = app.readInt(qs, "page", 1)
 	input.Filters.PageSize = app.readInt(qs, "page_size", 20)
@@ -86,7 +90,7 @@ func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Reque
 	// Call the GetAll() method to retrieve the movies, passing in the various filter
 	// parameters.
 	// Accept the metadata struct as a return value.
-	products, metadata, err := app.models.Products.GetAll(input.CategoryID, input.BrandID, input.CountryID, input.Filters)
+	products, metadata, err := app.models.Products.GetAll(input.CategoryID, input.BrandIDs, input.CountryID, input.Name, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
