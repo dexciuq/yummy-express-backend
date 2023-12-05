@@ -53,5 +53,21 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/discounts/:id", app.deleteDiscountHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/discounts/:id", app.updateDiscountHandler)
 
+	//roles
+	router.HandlerFunc(http.MethodPost, "/v1/roles", app.addRoleHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/roles", app.listRolesHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/roles/:id", app.showRoleHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/roles/:id", app.deleteRoleHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/roles/:id", app.updateRoleHandler)
+
+	router.HandlerFunc(http.MethodPost, "/v1/auth/register", app.registerUserHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/auth/authenticate", app.authenticateUserHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/auth/logout", app.authMiddleware(app.logoutUserHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/auth/refresh", app.authMiddleware(app.refreshHandler))
+
+	router.HandlerFunc(http.MethodGet, "/v1/users/:id", app.showUserHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/users/:id", app.authMiddleware(app.updateUserHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/users/:id", app.authMiddleware(app.deleteUserHandler))
+
 	return router
 }

@@ -17,6 +17,9 @@ type Models struct {
 	Units    UnitModel
 	Country  CountryModel
 	Discount DiscountModel
+	Roles    RoleModel
+	Users    UserModel
+	Tokens   TokenModel
 }
 
 func NewModels(db *sql.DB) Models {
@@ -27,5 +30,8 @@ func NewModels(db *sql.DB) Models {
 		Units:    UnitModel{DB: db},
 		Country:  CountryModel{DB: db},
 		Discount: DiscountModel{DB: db},
+		Roles:    RoleModel{DB: db},
+		Users:    UserModel{DB: db},
+		Tokens:   TokenModel{DB: db},
 	}
 }
