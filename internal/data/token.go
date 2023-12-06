@@ -7,7 +7,14 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"os"
+	"reflect"
 	"time"
+)
+
+var (
+	ErrTokenExpired    = errors.New("token was expired")
+	AccessTokenExpire  = time.Minute * 15
+	RefreshTokenExpire = time.Hour * 24 * 30 //time.Minute * 5
 )
 
 type TokenData struct {
@@ -34,11 +41,10 @@ func GenerateTokens(userID int64, roleID int64) (*Token, error) {
 		RefreshToken: "",
 		AccessToken:  "",
 	}
-	refreshExpiresAt := time.Hour * 24 * 30
 	refreshClaims := jwt.MapClaims{
 		"user_id": userID,
 		"role_id": roleID,
-		"exp":     time.Now().Add(refreshExpiresAt).Unix(),
+		"exp":     time.Now().Add(RefreshTokenExpire).Unix(),
 	}
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS512, refreshClaims)
@@ -48,11 +54,10 @@ func GenerateTokens(userID int64, roleID int64) (*Token, error) {
 	}
 	token.RefreshToken = refreshTokenString
 
-	accessExpiresAt := time.Minute * 15
 	accessClaims := jwt.MapClaims{
 		"user_id": userID,
 		"role_id": roleID,
-		"exp":     time.Now().Add(accessExpiresAt).Unix(),
+		"exp":     time.Now().Add(AccessTokenExpire).Unix(),
 	}
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, accessClaims)
 	accessTokenString, err := accessToken.SignedString([]byte(os.Getenv("ACCESS_SK")))
@@ -181,6 +186,48 @@ func (t TokenModel) FindToken(refreshToken string) (*Token, error) {
 	}
 
 	return &token, nil
+}
+
+func (t TokenModel) RefreshAccessToken(refreshToken string) (string, error) {
+	claims, err := DecodeRefreshToken(refreshToken)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(len(claims))
+	if len(claims) == 0 {
+		return "", ErrTokenExpired
+	}
+	exp := int64(claims["exp"].(float64))
+	expUnix := time.Unix(exp, 0)
+	fmt.Println(exp, reflect.TypeOf(exp))
+	fmt.Println(expUnix, reflect.TypeOf(expUnix))
+	fmt.Println(time.Now().After(expUnix), time.Now())
+	if time.Now().After(expUnix) {
+		fmt.Println("token expired")
+		return "", ErrTokenExpired
+	}
+	userId := claims["user_id"].(float64)
+	token, err := t.FindTokenByUserId(int64(userId))
+	if err != nil {
+		return "", err
+	}
+
+	if token.RefreshToken != refreshToken {
+		return "", errors.New("wrong refresh token")
+	}
+
+	accessClaims := jwt.MapClaims{
+		"user_id": claims["user_id"],
+		"role_id": claims["role_id"],
+		"exp":     time.Now().Add(AccessTokenExpire).Unix(),
+	}
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, accessClaims)
+	accessTokenString, err := accessToken.SignedString([]byte(os.Getenv("ACCESS_SK")))
+
+	if err != nil {
+		return "", err
+	}
+	return accessTokenString, nil
 }
 
 func DecodeRefreshToken(refreshToken string) (jwt.MapClaims, error) {

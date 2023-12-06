@@ -63,11 +63,12 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/auth/register", app.registerUserHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/auth/authenticate", app.authenticateUserHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/auth/logout", app.authMiddleware(app.logoutUserHandler))
-	router.HandlerFunc(http.MethodGet, "/v1/auth/refresh", app.authMiddleware(app.refreshHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/auth/refresh", app.refreshHandler)
 
 	router.HandlerFunc(http.MethodGet, "/v1/users/:id", app.showUserHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/users/:id", app.authMiddleware(app.updateUserHandler))
 	router.HandlerFunc(http.MethodDelete, "/v1/users/:id", app.authMiddleware(app.deleteUserHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/profile/me", app.authMiddleware(app.getUserInformationByToken))
 
 	return router
 }

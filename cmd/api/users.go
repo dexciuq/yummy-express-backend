@@ -2,10 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"net/http"
+	"reflect"
 	"strings"
+	"time"
 )
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +51,11 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrDuplicateEmail):
+			fmt.Println("Duplicate email users")
 			v.AddError("email", "a user with this email address already exists")
 			app.failedValidationResponse(w, r, v.Errors)
 		default:
+			fmt.Println("Not duplicate email users")
 			app.serverErrorResponse(w, r, err)
 		}
 		return
@@ -119,6 +124,30 @@ func (app *application) authenticateUserHandler(w http.ResponseWriter, r *http.R
 		HttpOnly: true,
 		MaxAge:   30 * 24 * 60 * 60,
 	}
+	fmt.Println("Autorization tokens time")
+	fmt.Println("Access token")
+	accessTokenMap, _ := data.DecodeAccessToken(token.AccessToken)
+	exp := int64(accessTokenMap["exp"].(float64))
+	expUnix := time.Unix(exp, 0)
+	fmt.Println(exp, reflect.TypeOf(exp))
+	fmt.Println(expUnix, reflect.TypeOf(expUnix))
+	fmt.Println(time.Now().After(expUnix), time.Now())
+	if time.Now().After(expUnix) {
+		fmt.Println("token expired")
+		//				app.errorResponse(w, r, http.StatusUnauthorized, "access token was expired")
+	}
+	fmt.Println("Refresh token")
+	refreshTokenMap, _ := data.DecodeRefreshToken(token.RefreshToken)
+	exp = int64(refreshTokenMap["exp"].(float64))
+	expUnix = time.Unix(exp, 0)
+	fmt.Println(exp, reflect.TypeOf(exp))
+	fmt.Println(expUnix, reflect.TypeOf(expUnix))
+	fmt.Println(time.Now().After(expUnix), time.Now())
+	if time.Now().After(expUnix) {
+		fmt.Println("token expired")
+		//				app.errorResponse(w, r, http.StatusUnauthorized, "access token was expired")
+	}
+	fmt.Println("-------------------------------")
 
 	http.SetCookie(w, &refreshTokenCookie)
 	if err = app.writeJSON(w, http.StatusOK, envelope{"refreshToken": token.RefreshToken, "accessToken": token.AccessToken}, nil); err != nil {
@@ -127,12 +156,46 @@ func (app *application) authenticateUserHandler(w http.ResponseWriter, r *http.R
 }
 
 func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
+	authorizationHeader := r.Header.Get("Refresh")
+	if authorizationHeader == "" {
+		app.UserUnauthorizedResponse(w, r)
+	}
+
+	refreshToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
+	fmt.Println("Refreshing access token, refresh token:", refreshToken)
+	accessToken, err := app.models.Tokens.RefreshAccessToken(refreshToken)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrTokenExpired):
+			fmt.Println("Refresh/maybe token expired")
+			app.errorResponse(w, r, http.StatusUnauthorized, "Refresh/maybe token expired")
+		default:
+			fmt.Println("Not refresh/maybe token expired")
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+	if accessToken == "" {
+		app.serverErrorResponse(w, r, data.ErrTokenExpired)
+	}
+
+	if err = app.writeJSON(w, http.StatusOK, envelope{"accessToken": accessToken}, nil); err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) getUserInformationByToken(w http.ResponseWriter, r *http.Request) {
 	authorizationHeader := r.Header.Get("Authorization")
 	if authorizationHeader == "" {
 		app.UserUnauthorizedResponse(w, r)
 	}
 
 	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
+
+	if accessToken == "" {
+		app.UserUnauthorizedResponse(w, r)
+	}
+
 	accessTokenMap, err := data.DecodeAccessToken(accessToken)
 
 	if err != nil {
@@ -140,51 +203,24 @@ func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId := accessTokenMap["user_id"].(float64)
-	refreshToken, err := app.models.Tokens.FindTokenByUserId(int64(userId))
-	if err != nil {
-		app.UserUnauthorizedResponse(w, r)
-	}
-	_, err = data.DecodeRefreshToken(refreshToken.RefreshToken)
-	if err != nil {
-		app.UserUnauthorizedResponse(w, r)
-	}
-	userForToken, err := app.models.Users.GetById(refreshToken.UserID)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-	}
+	user, err := app.models.Users.GetById(int64(userId))
 
-	token, err := data.GenerateTokens(userForToken.ID, userForToken.Role_ID)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
-
-	if err = app.models.Tokens.SaveToken(token); err != nil {
-		app.serverErrorResponse(w, r, err)
-	}
-
-	refreshTokenCookie := http.Cookie{
-		Name:     "refreshToken",
-		Value:    token.RefreshToken,
-		HttpOnly: true,
-		MaxAge:   30 * 24 * 60 * 60,
-	}
-
-	http.SetCookie(w, &refreshTokenCookie)
-	if err = app.writeJSON(w, http.StatusOK, envelope{"refreshToken": token.RefreshToken, "accessToken": token.AccessToken}, nil); err != nil {
+	err = app.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
+	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 }
 
 func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-
-	err := app.readJSON(w, r, &input)
-	if err != nil {
-		app.badRequestResponse(w, r, err)
-	}
-
 	authorizationHeader := r.Header.Get("Authorization")
 	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
 
@@ -200,10 +236,6 @@ func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request
 		app.UserUnauthorizedResponse(w, r)
 	}
 
-	if token.RefreshToken != input.RefreshToken {
-		app.UserUnauthorizedResponse(w, r)
-	}
-
 	err = app.models.Tokens.RemoveToken(token.RefreshToken)
 
 	if err != nil {
@@ -214,7 +246,7 @@ func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request
 		MaxAge: -1,
 	}
 	http.SetCookie(w, &logoutCookie)
-	app.writeJSON(w, http.StatusOK, envelope{"refreshToken": token.RefreshToken}, nil)
+	app.writeJSON(w, http.StatusOK, envelope{"message": "you was successfully logouted"}, nil)
 
 }
 
