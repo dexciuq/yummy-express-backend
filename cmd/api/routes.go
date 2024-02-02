@@ -70,5 +70,12 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/users/:id", app.authMiddleware(app.deleteUserHandler))
 	router.HandlerFunc(http.MethodGet, "/v1/profile/me", app.authMiddleware(app.getUserInformationByToken))
 
+	//orders
+	router.HandlerFunc(http.MethodPost, "/v1/orders", app.addOrderHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/orders", app.listOrdersHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/orders/:id", app.showOrderHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/orders/:id", app.deleteOrderHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/orders/:id", app.updateOrderHandler)
+
 	return router
 }
