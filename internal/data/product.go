@@ -236,6 +236,40 @@ func (p ProductModel) Get(id int64) (*Product, error) {
 	return &product, nil
 }
 
+func (p ProductModel) GetByUPC(upc string) (*Product, error) {
+	// Define the SQL query for retrieving the movie data.
+	query := `
+		SELECT id, name, price, description, category_id, upc, discount_id, quantity, unit_id, image, brand_id, country_id, step
+		FROM products
+		WHERE upc = $1`
+	// Declare a Movie struct to hold the data returned by the query.
+	var product Product
+	err := p.DB.QueryRow(query, upc).Scan(
+		&product.ID,
+		&product.Name,
+		&product.Price,
+		&product.Description,
+		&product.CategoryID,
+		&product.UPC,
+		&product.DiscountID,
+		&product.Quantity,
+		&product.UnitID,
+		&product.Image,
+		&product.BrandID,
+		&product.CountryID,
+		&product.Step,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &product, nil
+}
+
 func (p ProductModel) GetDB(id int64) (*productDB, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound

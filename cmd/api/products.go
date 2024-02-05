@@ -126,6 +126,30 @@ func (app *application) showProductHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func (app *application) findProductByUPCHandler(w http.ResponseWriter, r *http.Request) {
+	upc, err := app.readParamByNurik(r, "upc")
+	if err != nil {
+		app.notFoundResponse(w, r)
+	}
+
+	product, err := app.models.Products.GetByUPC(upc)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+	// Encode the struct to JSON and send it as the HTTP response.
+	// using envelope
+	err = app.writeJSON(w, http.StatusOK, envelope{"product": product}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) updateProductHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {

@@ -23,6 +23,12 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
+func (app *application) readParamByNurik(r *http.Request, name string) (string, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+	param := params.ByName(name)
+	return param, nil
+}
+
 func (app *application) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
 	js, err := json.Marshal(data)
 	if err != nil {
