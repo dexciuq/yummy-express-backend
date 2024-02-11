@@ -121,9 +121,15 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 		}
 		return
 	}
+	items, err := app.models.OrderItems.GetAllByOrder(order.ID)
+	products := []*data.Product{}
+	for _, item := range items {
+		product, _ := app.models.Products.Get(item.ProductID)
+		products = append(products, product)
+	}
 	// Encode the struct to JSON and send it as the HTTP response.
 	// using envelope
-	err = app.writeJSON(w, http.StatusOK, envelope{"order": order}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"order": order,"orderProducts": products}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
