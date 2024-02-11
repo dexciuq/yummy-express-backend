@@ -74,6 +74,7 @@ func (app *application) routes() http.Handler {
 	//orders
 	router.HandlerFunc(http.MethodPost, "/v1/orders", app.addOrderHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/orders", app.listOrdersHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/profile/orders", app.authMiddleware(app.listUserOrdersHandler))
 	router.HandlerFunc(http.MethodGet, "/v1/orders/:id", app.showOrderHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/orders/:id", app.deleteOrderHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/orders/:id", app.updateOrderHandler)

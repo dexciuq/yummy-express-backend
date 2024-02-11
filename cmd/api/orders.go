@@ -88,6 +88,23 @@ func (app *application) listOrdersHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+func (app *application) listUserOrdersHandler(w http.ResponseWriter, r *http.Request) {
+	authorizationHeader := r.Header.Get("Authorization")
+	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
+	accessTokenMap, err := data.DecodeAccessToken(accessToken)
+	userId := accessTokenMap["user_id"].(int)
+
+	orders, err := app.models.Orders.GetAllForUser(userId)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"orders": orders}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {

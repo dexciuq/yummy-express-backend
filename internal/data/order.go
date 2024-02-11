@@ -101,6 +101,50 @@ func (o OrderModel) GetAll() ([]*Order, error) {
 	return orders, nil
 }
 
+func (o OrderModel) GetAllForUser(id int) ([]*Order, error) {
+	// Update the SQL query to include the window function which counts the total
+	// (filtered) records.
+	query := `SELECT count(*) OVER(), id, user_id, total, address, status_id, created_at, delivered_at FROM orders where id = $1`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	defer cancel()
+
+	rows, err := o.DB.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, err // Update this to return an empty Metadata struct.
+	}
+
+	defer rows.Close()
+
+	totalRecords := 0
+
+	orders := []*Order{}
+
+	for rows.Next() {
+		var order Order
+		err := rows.Scan(
+			&totalRecords, // Scan the count from the window function into totalRecords.
+			&order.ID,
+			&order.UserID,
+			&order.Total,
+			&order.Address,
+			&order.StatusID,
+			&order.CreatedAt,
+			&order.DeliveredAt,
+		)
+		if err != nil {
+			return nil, err // Update this to return an empty Metadata struct.
+		}
+		orders = append(orders, &order)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err // Update this to return an empty Metadata struct.
+	}
+	return orders, nil
+}
+
 func (o OrderModel) Get(id int64) (*Order, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
