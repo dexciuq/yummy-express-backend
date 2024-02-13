@@ -85,6 +85,8 @@ func main() {
 	app.models.Country.Init()
 	app.models.Category.Init()
 	app.models.Products.Init()
+	app.models.Roles.Init()
+	app.models.Statuses.Init()
 
 	err = app.serve()
 	if err != nil {

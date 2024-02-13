@@ -1,11 +1,11 @@
 CREATE TABLE if not exists order_items(
     id bigserial,
-    user_id bigint,
+    order_id bigint,
     product_id bigint,
     quantity double precision,
     total bigint,
-    CONSTRAINT user_id FOREIGN KEY (user_id)
-    REFERENCES users (id) MATCH SIMPLE
+    CONSTRAINT order_id FOREIGN KEY (order_id)
+    REFERENCES orders (id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
     NOT VALID,

@@ -148,3 +148,33 @@ func (r RoleModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (r RoleModel) Init() error {
+	var count int
+	err := r.DB.QueryRow("SELECT COUNT(*) FROM roles").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		roles := []*Role{
+			{
+				Name:        "USER",
+				Description: "Just user",
+			},
+			{
+				Name:        "ADMIN",
+				Description: "Admin can make additional",
+			},
+		}
+
+		for _, role := range roles {
+			err := r.Insert(role)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

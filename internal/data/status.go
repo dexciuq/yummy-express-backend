@@ -148,3 +148,33 @@ func (s StatusModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (s StatusModel) Init() error {
+	var count int
+	err := s.DB.QueryRow("SELECT COUNT(*) FROM statuses").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		statuses := []*Status{
+			{
+				Name:        "Order accepted",
+				Description: "Order accepted",
+			},
+			{
+				Name:        "Delivered",
+				Description: "Delivered",
+			},
+		}
+
+		for _, role := range statuses {
+			err := s.Insert(role)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

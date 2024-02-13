@@ -25,7 +25,7 @@ func ValidateOrderItem(v *validator.Validator, order *OrderItem) {
 	//v.Check(len(order.Name) <= 20, "name", "must not be more than 20 bytes long")
 	//v.Check(order.Price >= 0, "price", "can not be negative")
 	//v.Check(order.Description != "", "description", "must be provided")
-	//v.Check(order.Quantity >= 0, "quantity", "can not be negative")
+	//v.Check(order.Amount >= 0, "quantity", "can not be negative")
 }
 
 func (o OrderItemModel) Insert(item *OrderItem) error {

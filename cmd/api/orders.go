@@ -14,12 +14,12 @@ func (app *application) addOrderHandler(w http.ResponseWriter, r *http.Request) 
 	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
 	accessTokenMap, _ := data.DecodeAccessToken(accessToken)
 
-	userId := accessTokenMap["user_id"].(int64)
+	userId := accessTokenMap["user_id"].(float64)
 
 	type product struct {
-		ID       int64   `json:"id"`
-		Price    int64   `json:"price"`
-		Quantity float64 `json:"quantity"`
+		ID     int64   `json:"id"`
+		Price  int64   `json:"price"`
+		Amount float64 `json:"amount"`
 	}
 	var input struct {
 		Total    int64     `json:"total"`
@@ -34,9 +34,10 @@ func (app *application) addOrderHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	order := &data.Order{
-		UserID:  userId,
-		Total:   input.Total,
-		Address: input.Address,
+		UserID:   int64(userId),
+		Total:    input.Total,
+		Address:  input.Address,
+		StatusID: int64(1),
 	}
 
 	v := validator.New()
@@ -55,7 +56,7 @@ func (app *application) addOrderHandler(w http.ResponseWriter, r *http.Request) 
 		item := &data.OrderItem{
 			OrderID:   order.ID,
 			ProductID: product.ID,
-			Quantity:  product.Quantity,
+			Quantity:  product.Amount,
 			Total:     product.Price,
 		}
 		if data.ValidateOrderItem(v, item); !v.Valid() {
@@ -92,13 +93,14 @@ func (app *application) listUserOrdersHandler(w http.ResponseWriter, r *http.Req
 	authorizationHeader := r.Header.Get("Authorization")
 	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
 	accessTokenMap, err := data.DecodeAccessToken(accessToken)
-	userId := accessTokenMap["user_id"].(int)
+	userId := accessTokenMap["user_id"].(float64)
 
-	orders, err := app.models.Orders.GetAllForUser(userId)
+	orders, err := app.models.Orders.GetAllForUser(int(userId))
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"orders": orders}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -129,7 +131,7 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 	}
 	// Encode the struct to JSON and send it as the HTTP response.
 	// using envelope
-	err = app.writeJSON(w, http.StatusOK, envelope{"order": order,"orderProducts": products}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"order": order, "orderProducts": products}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

@@ -156,7 +156,7 @@ func (app *application) authenticateUserHandler(w http.ResponseWriter, r *http.R
 }
 
 func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
-	authorizationHeader := r.Header.Get("Refresh")
+	authorizationHeader := r.Header.Get("Authorization")
 	if authorizationHeader == "" {
 		app.UserUnauthorizedResponse(w, r)
 	}

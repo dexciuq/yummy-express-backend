@@ -27,7 +27,7 @@ func ValidateOrder(v *validator.Validator, order *Order) {
 	//v.Check(len(order.Name) <= 20, "name", "must not be more than 20 bytes long")
 	//v.Check(order.Price >= 0, "price", "can not be negative")
 	//v.Check(order.Description != "", "description", "must be provided")
-	//v.Check(order.Quantity >= 0, "quantity", "can not be negative")
+	//v.Check(order.Amount >= 0, "quantity", "can not be negative")
 }
 
 func (o OrderModel) Insert(order *Order) error {
@@ -104,7 +104,7 @@ func (o OrderModel) GetAll() ([]*Order, error) {
 func (o OrderModel) GetAllForUser(id int) ([]*Order, error) {
 	// Update the SQL query to include the window function which counts the total
 	// (filtered) records.
-	query := `SELECT count(*) OVER(), id, user_id, total, address, status_id, created_at, delivered_at FROM orders where id = $1`
+	query := `SELECT count(*) OVER(), id, user_id, total, address, status_id, created_at, delivered_at FROM orders where user_id = $1`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
