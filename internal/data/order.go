@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 type Order struct {

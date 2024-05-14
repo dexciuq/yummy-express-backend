@@ -2,8 +2,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -57,7 +59,7 @@ func (app *application) addOrderHandler(w http.ResponseWriter, r *http.Request) 
 			OrderID:   order.ID,
 			ProductID: product.ID,
 			Quantity:  product.Amount,
-			Total:     product.Price,
+			Total:     int64(math.Floor((float64(product.Price) * product.Amount) * 100)),
 		}
 		if data.ValidateOrderItem(v, item); !v.Valid() {
 			app.failedValidationResponse(w, r, v.Errors)
@@ -112,6 +114,7 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		app.notFoundResponse(w, r)
 	}
+	fmt.Println("order_id: ", id)
 
 	order, err := app.models.Orders.Get(id)
 	if err != nil {
@@ -123,10 +126,59 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 		}
 		return
 	}
+
 	items, err := app.models.OrderItems.GetAllByOrder(order.ID)
+
+	type ProductItem struct {
+		ID          int64   `json:"id"`
+		ProductID   int64   `json:"product_id"`
+		Name        string  `json:"name"`
+		Price       int64   `json:"price"`
+		Description string  `json:"description"`
+		UPC         string  `json:"upc"`
+		Quantity    int64   `json:"quantity"`
+		Step        float64 `json:"step"`
+		Amount      float64 `json:"amount"`
+		Subtotal    int64   `json:"subtotal"`
+		Image       string  `json:"image"`
+		Unit        string  `json:"unit"`
+		Category    string  `json:"category"`
+		Brand       string  `json:"brand"`
+		Country     string  `json:"country"`
+	}
+
+	var productItems []ProductItem
+	for _, item := range items {
+		product, _ := app.models.Products.Get(item.ProductID)
+		unit, _ := app.models.Units.Get(product.UnitID)
+		category, _ := app.models.Category.Get(product.CategoryID)
+		brand, _ := app.models.Brands.Get(product.BrandID)
+		country, _ := app.models.Country.Get(product.CountryID)
+
+		productItem := ProductItem{
+			ID:          item.ID,
+			ProductID:   product.ID,
+			Name:        product.Name,
+			Price:       product.Price,
+			Description: product.Description,
+			Category:    category.Name,
+			UPC:         product.UPC,
+			Quantity:    product.Quantity,
+			Unit:        unit.Name,
+			Image:       product.Image,
+			Brand:       brand.Name,
+			Country:     country.Name,
+			Step:        product.Step,
+			Amount:      item.Quantity,
+			Subtotal:    item.Total,
+		}
+		productItems = append(productItems, productItem)
+	}
 	// Encode the struct to JSON and send it as the HTTP response.
 	// using envelope
-	err = app.writeJSON(w, http.StatusOK, envelope{"order": order, "orderItems": items}, nil)
+	fmt.Println("order:", order)
+	fmt.Println("order_items:", productItems)
+	err = app.writeJSON(w, http.StatusOK, envelope{"order": order, "order_items": productItems}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

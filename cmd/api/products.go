@@ -134,6 +134,7 @@ func (app *application) findProductByUPCHandler(w http.ResponseWriter, r *http.R
 
 	product, err := app.models.Products.GetByUPC(upc)
 	if err != nil {
+
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
 			app.notFoundResponse(w, r)

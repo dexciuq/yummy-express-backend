@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"os"
 	"reflect"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 var (
