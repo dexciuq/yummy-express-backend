@@ -59,7 +59,7 @@ func (app *application) addOrderHandler(w http.ResponseWriter, r *http.Request) 
 			OrderID:   order.ID,
 			ProductID: product.ID,
 			Quantity:  product.Amount,
-			Total:     int64(math.Floor((float64(product.Price) * product.Amount) * 100)),
+			Total:     int64(math.Floor(float64(product.Price) * product.Amount)),
 		}
 		if data.ValidateOrderItem(v, item); !v.Valid() {
 			app.failedValidationResponse(w, r, v.Errors)
@@ -139,7 +139,7 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 		Quantity    int64   `json:"quantity"`
 		Step        float64 `json:"step"`
 		Amount      float64 `json:"amount"`
-		Subtotal    float64 `json:"subtotal"`
+		Subtotal    int64   `json:"subtotal"`
 		Image       string  `json:"image"`
 		Unit        string  `json:"unit"`
 		Category    string  `json:"category"`
@@ -170,7 +170,7 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 			Country:     country.Name,
 			Step:        product.Step,
 			Amount:      item.Quantity,
-			Subtotal:    float64(item.Total) / 100,
+			Subtotal:    item.Total,
 		}
 		fmt.Println("order_id", order.ID, "subtotal", productItem.Subtotal, "item.total", item.Total)
 		productItems = append(productItems, productItem)
