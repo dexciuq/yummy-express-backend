@@ -139,7 +139,7 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 		Quantity    int64   `json:"quantity"`
 		Step        float64 `json:"step"`
 		Amount      float64 `json:"amount"`
-		Subtotal    int64   `json:"subtotal"`
+		Subtotal    float64 `json:"subtotal"`
 		Image       string  `json:"image"`
 		Unit        string  `json:"unit"`
 		Category    string  `json:"category"`
@@ -170,8 +170,9 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 			Country:     country.Name,
 			Step:        product.Step,
 			Amount:      item.Quantity,
-			Subtotal:    item.Total,
+			Subtotal:    float64(item.Total) / 100,
 		}
+		fmt.Println("order_id", order.ID, "subtotal", productItem.Subtotal, "item.total", item.Total)
 		productItems = append(productItems, productItem)
 	}
 	// Encode the struct to JSON and send it as the HTTP response.
