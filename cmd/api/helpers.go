@@ -23,6 +23,15 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
+func (app *application) readUUIDParam(r *http.Request) (string, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+	uuid := params.ByName("uuid")
+	if len(uuid) == 0 {
+		return "", errors.New("invalid uuid parameter")
+	}
+	return uuid, nil
+}
+
 func (app *application) readParamByNurik(r *http.Request, name string) (string, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 	param := params.ByName(name)
@@ -126,4 +135,17 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int) int
 		return defaultValue
 	}
 	return i
+}
+
+func (app *application) background(function func()) {
+	app.wg.Add(1)
+	go func() {
+		defer app.wg.Done()
+		defer func() {
+			if err := recover(); err != nil {
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+		function()
+	}()
 }

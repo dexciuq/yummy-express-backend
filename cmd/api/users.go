@@ -3,12 +3,15 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/dexciuq/yummy-express-backend/internal/data"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/dexciuq/yummy-express-backend/internal/data"
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +64,89 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	uuidCode := strings.Replace(uuid.New().String(), "-", "", -1)
+	err = app.models.ActivationLinks.Insert(user, uuidCode)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	app.background(func() {
+		data := map[string]any{
+			"name":  user.FirstName + " " + user.LastName,
+			"email": user.Email,
+			"uuid":  uuidCode,
+		}
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
 	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	uuidParam, err := app.readUUIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	activationLink, err := app.models.ActivationLinks.Get(uuidParam)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	user, err := app.models.Users.GetById(activationLink.UserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	if uuidParam == activationLink.Link {
+		user.Activated = true
+		activationLink.Activated = true
+	} else {
+		app.badRequestResponse(w, r, err)
+	}
+
+	err = app.models.Users.Update(user)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.models.ActivationLinks.Update(activationLink)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
@@ -95,6 +180,11 @@ func (app *application) authenticateUserHandler(w http.ResponseWriter, r *http.R
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
+		return
+	}
+
+	if !user.Activated {
+		app.notActivatedResponse(w, r)
 		return
 	}
 
@@ -356,6 +446,127 @@ func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"message": "user successfully deleted"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) requestPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// Validate the email
+	v := validator.New()
+	v.Check(validator.Matches(input.Email, validator.EmailRX), "email", "must be a valid email address")
+
+	if !v.Valid() {
+		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		return
+	}
+
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	code, err := data.GenerateResetCode()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	expiration := time.Now().Add(1 * time.Hour)
+	err = app.models.Users.InsertPasswordResetCode(user.ID, code, expiration)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Send email with the reset code
+	app.background(func() {
+		data := map[string]any{
+			"name":      user.FirstName + " " + user.LastName,
+			"email":     user.Email,
+			"resetCode": code,
+		}
+		err = app.mailer.Send(user.Email, "reset_password_code.tmpl", data)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Password reset code has been sent to your email"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+
+}
+
+func (app *application) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Code        string `json:"code"`
+		NewPassword string `json:"new_password"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	resetCode, err := app.models.Users.ValidatePasswordResetCode(input.Code)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if resetCode == nil || time.Now().After(resetCode.ExpiresAt) {
+		http.Error(w, "Invalid or expired code", http.StatusBadRequest)
+		return
+	}
+	user, err := app.models.Users.GetById(resetCode.User_ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+	if input.NewPassword != "" {
+		user.Password.Set(input.NewPassword)
+	}
+
+	//err = app.models.Users.UpdateUserPassword(resetCode.User_ID, input.NewPassword)
+	//if err != nil {
+	//	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	//	return
+	//}
+	err = app.models.Users.Update(user)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.models.Users.DeletePasswordResetCode(input.Code)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Password has been reset successfully"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

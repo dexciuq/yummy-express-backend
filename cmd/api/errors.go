@@ -60,8 +60,8 @@ func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http
 }
 
 func (app *application) notActivatedResponse(w http.ResponseWriter, r *http.Request) {
-	message := "unable to authenticate the user due to non activation, please activate your account "
-	app.errorResponse(w, r, http.StatusNotFound, message)
+	message := "unable to authenticate the user due to non activation, please activate your account"
+	app.errorResponse(w, r, http.StatusForbidden, message)
 }
 
 func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Request) {

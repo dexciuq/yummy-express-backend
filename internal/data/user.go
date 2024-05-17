@@ -2,12 +2,15 @@ package data
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 var (
@@ -24,6 +27,15 @@ type User struct {
 	Password    password  `json:"-"`
 	CreatedAt   time.Time `json:"created_at"`
 	Role_ID     int64     `json:"role_id"`
+	Activated   bool      `json:"is_activated"`
+}
+
+type PasswordResetCode struct {
+	ID        int64     `json:"id"`
+	User_ID   int64     `json:"user_id"`
+	Code      string    `json:"code"`
+	Email     string    `json:"email"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 func (u *User) IsAnonymous() bool {
@@ -111,7 +123,7 @@ func (u UserModel) Insert(user *User) error {
 
 func (u UserModel) GetById(id int64) (*User, error) {
 	query := `
-	SELECT id, firstname, lastname, phone_number, email, password_hash, created_at, role_id
+	SELECT id, firstname, lastname, phone_number, email, password_hash, created_at, role_id, is_activated
 	FROM users
 	WHERE id = $1`
 
@@ -129,6 +141,7 @@ func (u UserModel) GetById(id int64) (*User, error) {
 		&user.Password.hash,
 		&user.CreatedAt,
 		&user.Role_ID,
+		&user.Activated,
 	)
 	if err != nil {
 		switch {
@@ -143,7 +156,7 @@ func (u UserModel) GetById(id int64) (*User, error) {
 
 func (u UserModel) GetByEmail(email string) (*User, error) {
 	query := `
-	SELECT id, firstname, lastname, phone_number, email, password_hash, created_at, role_id
+	SELECT id, firstname, lastname, phone_number, email, password_hash, created_at, role_id, is_activated
 	FROM users
 	WHERE email = $1`
 
@@ -161,6 +174,7 @@ func (u UserModel) GetByEmail(email string) (*User, error) {
 		&user.Password.hash,
 		&user.CreatedAt,
 		&user.Role_ID,
+		&user.Activated,
 	)
 	if err != nil {
 		switch {
@@ -173,11 +187,56 @@ func (u UserModel) GetByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
+// InsertPasswordResetCode stores a password reset code for a user.
+func (m UserModel) InsertPasswordResetCode(userID int64, code string, expiresAt time.Time) error {
+	query := `INSERT INTO password_reset_codes (user_id, code, expires_at) VALUES ($1, $2, $3)`
+	_, err := m.DB.Exec(query, userID, code, expiresAt)
+	return err
+}
+
+// ValidatePasswordResetCode validates the reset code.
+func (m UserModel) ValidatePasswordResetCode(code string) (*PasswordResetCode, error) {
+	resetCode := &PasswordResetCode{}
+	query := `SELECT user_id, expires_at FROM password_reset_codes WHERE code = $1`
+	err := m.DB.QueryRow(query, code).Scan(&resetCode.User_ID, &resetCode.ExpiresAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return resetCode, nil
+}
+
+// UpdateUserPassword updates a user's password.
+func (m UserModel) UpdateUserPassword(userID int64, newPassword string) error {
+	query := `UPDATE users SET password_hash = $1 WHERE id = $2`
+	_, err := m.DB.Exec(query, newPassword, userID)
+	return err
+}
+
+// DeletePasswordResetCode deletes a used password reset code.
+func (m UserModel) DeletePasswordResetCode(code string) error {
+	query := `DELETE FROM password_reset_codes WHERE code = $1`
+	_, err := m.DB.Exec(query, code)
+	return err
+}
+
+// GenerateResetCode generates a secure random reset code.
+func GenerateResetCode() (string, error) {
+	code := make([]byte, 6)
+	_, err := rand.Read(code)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(code), nil
+}
+
 func (u UserModel) Update(user *User) error {
 	query := `
 	UPDATE users
-	SET firstname = $1, lastname = $2, phone_number = $3, email = $4, password_hash = $5, role_id = $6
-	WHERE id = $7
+	SET firstname = $1, lastname = $2, phone_number = $3, email = $4, password_hash = $5, role_id = $6, is_activated = $7
+	WHERE id = $8
 	RETURNING id`
 
 	args := []any{
@@ -187,6 +246,7 @@ func (u UserModel) Update(user *User) error {
 		user.Email,
 		user.Password.hash,
 		user.Role_ID,
+		user.Activated,
 		user.ID,
 	}
 

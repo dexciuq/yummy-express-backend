@@ -11,33 +11,35 @@ var (
 )
 
 type Models struct {
-	Products   ProductModel
-	Brands     BrandModel
-	Category   CategoryModel
-	Units      UnitModel
-	Country    CountryModel
-	Discount   DiscountModel
-	Roles      RoleModel
-	Users      UserModel
-	Tokens     TokenModel
-	Statuses   StatusModel
-	Orders     OrderModel
-	OrderItems OrderItemModel
+	Products        ProductModel
+	Brands          BrandModel
+	Category        CategoryModel
+	Units           UnitModel
+	Country         CountryModel
+	Discount        DiscountModel
+	Roles           RoleModel
+	Users           UserModel
+	Tokens          TokenModel
+	Statuses        StatusModel
+	Orders          OrderModel
+	OrderItems      OrderItemModel
+	ActivationLinks ActivationLinkModel
 }
 
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Products:   ProductModel{DB: db},
-		Brands:     BrandModel{DB: db},
-		Category:   CategoryModel{DB: db},
-		Units:      UnitModel{DB: db},
-		Country:    CountryModel{DB: db},
-		Discount:   DiscountModel{DB: db},
-		Roles:      RoleModel{DB: db},
-		Users:      UserModel{DB: db},
-		Tokens:     TokenModel{DB: db},
-		Statuses:   StatusModel{DB: db},
-		Orders:     OrderModel{DB: db},
-		OrderItems: OrderItemModel{DB: db},
+		Products:        ProductModel{DB: db},
+		Brands:          BrandModel{DB: db},
+		Category:        CategoryModel{DB: db},
+		Units:           UnitModel{DB: db},
+		Country:         CountryModel{DB: db},
+		Discount:        DiscountModel{DB: db},
+		Roles:           RoleModel{DB: db},
+		Users:           UserModel{DB: db},
+		Tokens:          TokenModel{DB: db},
+		Statuses:        StatusModel{DB: db},
+		Orders:          OrderModel{DB: db},
+		OrderItems:      OrderItemModel{DB: db},
+		ActivationLinks: ActivationLinkModel{DB: db},
 	}
 }

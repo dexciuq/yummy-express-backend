@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS password_reset_codes (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    code VARCHAR(12) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
