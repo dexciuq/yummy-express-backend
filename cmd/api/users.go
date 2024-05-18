@@ -498,30 +498,30 @@ func (app *application) requestPasswordResetHandler(w http.ResponseWriter, r *ht
 	v.Check(validator.Matches(input.Email, validator.EmailRX), "email", "must be a valid email address")
 
 	if !v.Valid() {
-		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
 	user, err := app.models.Users.GetByEmail(input.Email)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 	if user == nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		app.notFoundResponse(w, r)
 		return
 	}
 
 	code, err := data.GenerateResetCode()
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
 	expiration := time.Now().Add(1 * time.Hour)
 	err = app.models.Users.InsertPasswordResetCode(user.ID, code, expiration)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
@@ -645,11 +645,11 @@ func (app *application) resetPasswordHandler(w http.ResponseWriter, r *http.Requ
 
 	resetCode, err := app.models.Users.ValidatePasswordResetCode(input.Code)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 	if resetCode == nil || time.Now().After(resetCode.ExpiresAt) {
-		http.Error(w, "Invalid or expired code", http.StatusBadRequest)
+		app.errorResponse(w, r, http.StatusBadRequest, "Invalid or expired code")
 		return
 	}
 	user, err := app.models.Users.GetById(resetCode.User_ID)
@@ -679,7 +679,7 @@ func (app *application) resetPasswordHandler(w http.ResponseWriter, r *http.Requ
 
 	err = app.models.Users.DeletePasswordResetCode(input.Code)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
