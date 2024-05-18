@@ -65,9 +65,9 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/auth/authenticate", app.authenticateUserHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/auth/logout", app.authMiddleware(app.logoutUserHandler))
 	router.HandlerFunc(http.MethodGet, "/v1/auth/refresh", app.refreshHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/request-password-reset", app.requestPasswordResetHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/verify-reset-code", app.verifyResetCodeHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/reset-password", app.resetPasswordHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/request-password-reset", app.requestPasswordResetHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/verify-reset-code", app.verifyResetCodeHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/reset-password", app.resetPasswordHandler)
 
 	router.HandlerFunc(http.MethodGet, "/v1/users/:id", app.showUserHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/users/:id", app.authMiddleware(app.updateUserHandler))
