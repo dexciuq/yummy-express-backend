@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     email text UNIQUE not null,
     password_hash bytea not null,
     created_at timestamp(0) with time zone not null default NOW(),
-    role_id bigint references roles(id)
-    is_activated boolean not null default false,
+    role_id bigint references roles(id),
+    is_activated boolean not null default false
     --     role varchar(10) not null default 'USER',
 --     username varchar(20) UNIQUE not null,
 --     registration_date timestamp(0) with time zone not null default NOW(),
