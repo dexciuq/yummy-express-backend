@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
+	"github.com/joho/godotenv"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
 	"github.com/dexciuq/yummy-express-backend/internal/data"
@@ -50,11 +51,12 @@ type application struct {
 }
 
 func getEnvVar(key string) string {
-	godotenv.Load()
 	return os.Getenv(key)
 }
 
 func main() {
+	godotenv.Load()
+
 	var cfg config
 	flag.IntVar(&cfg.port, "port", 8080, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
@@ -73,11 +75,13 @@ func main() {
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 
 	// Google smtp-server connection
-	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
+	smtp_mail := os.Getenv("mail")
+	smtp_sender := fmt.Sprintf("Yummy Express <%s>", smtp_mail)
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.office365.com", "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
-	flag.StringVar(&cfg.smtp.username, "smtp-username", "d4d7c7ff13b571", "SMTP username")
-	flag.StringVar(&cfg.smtp.password, "smtp-password", "4afd1466b0e398", "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "yummy-express@gmail.com", "SMTP sender")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", smtp_mail, "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("password_mail"), "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", smtp_sender, "SMTP sender")
 
 	flag.Parse()
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)

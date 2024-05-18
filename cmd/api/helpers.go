@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
+	"html/template"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 type envelope map[string]any
@@ -148,4 +150,17 @@ func (app *application) background(function func()) {
 		}()
 		function()
 	}()
+}
+
+func (app *application) renderTemplate(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
+	tmpl, err := template.ParseFiles(fmt.Sprintf("templates/%s.tmpl", name))
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }

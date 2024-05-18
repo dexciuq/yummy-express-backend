@@ -89,9 +89,13 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	templName := "account_activation"
 	uuidParam, err := app.readUUIDParam(r)
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.renderTemplate(w, r, templName, map[string]interface{}{
+			"title":   "Error",
+			"message": "Invalid activation link.",
+		})
 		return
 	}
 
@@ -99,9 +103,15 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Activation link not found.",
+			})
 		default:
-			app.serverErrorResponse(w, r, err)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Internal server error.",
+			})
 		}
 		return
 	}
@@ -110,9 +120,15 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "User not found.",
+			})
 		default:
-			app.serverErrorResponse(w, r, err)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Internal server error.",
+			})
 		}
 		return
 	}
@@ -121,16 +137,25 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		user.Activated = true
 		activationLink.Activated = true
 	} else {
-		app.badRequestResponse(w, r, err)
+		app.renderTemplate(w, r, templName, map[string]interface{}{
+			"title":   "Error",
+			"message": "Invalid activation link.",
+		})
 	}
 
 	err = app.models.Users.Update(user)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrEditConflict):
-			app.editConflictResponse(w, r)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Edit conflict. Please try again.",
+			})
 		default:
-			app.serverErrorResponse(w, r, err)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Internal server error.",
+			})
 		}
 		return
 	}
@@ -139,17 +164,23 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrEditConflict):
-			app.editConflictResponse(w, r)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Edit conflict. Please try again.",
+			})
 		default:
-			app.serverErrorResponse(w, r, err)
+			app.renderTemplate(w, r, templName, map[string]interface{}{
+				"title":   "Error",
+				"message": "Internal server error.",
+			})
 		}
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-	}
+	app.renderTemplate(w, r, templName, map[string]interface{}{
+		"title":   "Account Activated",
+		"message": "Your account has been activated successfully.",
+	})
 }
 
 func (app *application) authenticateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -512,6 +543,92 @@ func (app *application) requestPasswordResetHandler(w http.ResponseWriter, r *ht
 		app.serverErrorResponse(w, r, err)
 	}
 
+}
+
+func (app *application) verifyResetCodeHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Code string `json:"code"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	resetCode, err := app.models.Users.ValidatePasswordResetCode(input.Code)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	if resetCode == nil || time.Now().After(resetCode.ExpiresAt) {
+		app.invalidCredentialsResponse(w, r)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Code is valid"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) setNewPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Code        string `json:"code"`
+		NewPassword string `json:"new_password"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	resetCode, err := app.models.Users.ValidatePasswordResetCode(input.Code)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	if resetCode == nil || time.Now().After(resetCode.ExpiresAt) {
+		app.invalidCredentialsResponse(w, r)
+		return
+	}
+
+	user, err := app.models.Users.GetById(resetCode.User_ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = user.Password.Set(input.NewPassword)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.models.Users.Update(user)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.models.Users.DeletePasswordResetCode(input.Code)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Password has been reset successfully"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
