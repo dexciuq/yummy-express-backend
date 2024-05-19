@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/data"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"net/http"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/data"
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 func (app *application) addDiscountHandler(w http.ResponseWriter, r *http.Request) {
@@ -79,8 +80,7 @@ func (app *application) showDiscountHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
-	// using envelope
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"discount": discount}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

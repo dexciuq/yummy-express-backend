@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/dexciuq/yummy-express-backend/internal/data"
 )
 
 type envelope map[string]any
@@ -163,4 +165,23 @@ func (app *application) renderTemplate(w http.ResponseWriter, r *http.Request, n
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
+}
+
+func (app *application) getUserIDFromHeader(w http.ResponseWriter, r *http.Request) float64 {
+	authorizationHeader := r.Header.Get("Authorization")
+	if authorizationHeader == "" {
+		app.UserUnauthorizedResponse(w, r)
+	}
+
+	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
+	if accessToken == "" {
+		app.UserUnauthorizedResponse(w, r)
+	}
+	accessTokenMap, err := data.DecodeAccessToken(accessToken)
+	if err != nil {
+		app.UserUnauthorizedResponse(w, r)
+	}
+
+	userId := accessTokenMap["user_id"].(float64)
+	return userId
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -194,15 +193,13 @@ func (t TokenModel) RefreshAccessToken(refreshToken string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(len(claims))
+
 	if len(claims) == 0 {
 		return "", ErrTokenExpired
 	}
 	exp := int64(claims["exp"].(float64))
 	expUnix := time.Unix(exp, 0)
-	fmt.Println(exp, reflect.TypeOf(exp))
-	fmt.Println(expUnix, reflect.TypeOf(expUnix))
-	fmt.Println(time.Now().After(expUnix), time.Now())
+
 	if time.Now().After(expUnix) {
 		fmt.Println("token expired")
 		return "", ErrTokenExpired

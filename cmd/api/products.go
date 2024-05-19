@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
-	"net/http"
 )
 
 func (app *application) addProductHandler(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +72,7 @@ func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Reque
 		Name       string
 		data.Filters
 	}
-	// v := validator.New()
+
 	qs := r.URL.Query()
 	input.Name = app.readString(qs, "name", "")
 	fmt.Println(input.Name)
@@ -83,19 +84,19 @@ func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Reque
 	input.Filters.Sort = app.readString(qs, "sort", "id")
 	input.Filters.SortSafelist = []string{"id", "name", "price",
 		"-id", "-name", "-price"}
-	// if data.ValidateFilters(v, input.Filters); !v.Valid() {
-	// 	app.failedValidationResponse(w, r, v.Errors)
-	// 	return
-	// }
-	// Call the GetAll() method to retrieve the movies, passing in the various filter
-	// parameters.
-	// Accept the metadata struct as a return value.
+
+	v := validator.New()
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	products, metadata, err := app.models.Products.GetAll(input.CategoryID, input.BrandIDs, input.CountryID, input.Name, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	// Include the metadata in the response envelope.
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"products": products, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -118,8 +119,7 @@ func (app *application) showProductHandler(w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
-	// using envelope
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"product": product}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -134,7 +134,6 @@ func (app *application) findProductByUPCHandler(w http.ResponseWriter, r *http.R
 
 	product, err := app.models.Products.GetByUPC(upc)
 	if err != nil {
-
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
 			app.notFoundResponse(w, r)
@@ -143,8 +142,7 @@ func (app *application) findProductByUPCHandler(w http.ResponseWriter, r *http.R
 		}
 		return
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
-	// using envelope
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"product": product}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

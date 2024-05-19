@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 type Status struct {
@@ -56,7 +57,7 @@ func (s StatusModel) GetAll() ([]*Status, error) {
 
 	rows, err := s.DB.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 
 	defer rows.Close()
@@ -68,19 +69,19 @@ func (s StatusModel) GetAll() ([]*Status, error) {
 	for rows.Next() {
 		var status Status
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			&totalRecords,
 			&status.ID,
 			&status.Name,
 			&status.Description,
 		)
 		if err != nil {
-			return nil, err // Update this to return an empty Metadata struct.
+			return nil, err
 		}
 		statuses = append(statuses, &status)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 	return statuses, nil
 }
@@ -89,12 +90,12 @@ func (s StatusModel) Get(id int64) (*Status, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-	// Define the SQL query for retrieving the movie data.
+
 	query := `
 		SELECT id, name, description
 		FROM statuses
 		WHERE id = $1`
-	// Declare a Movie struct to hold the data returned by the query.
+
 	var status Status
 	err := s.DB.QueryRow(query, id).Scan(
 		&status.ID,
@@ -136,13 +137,11 @@ func (s StatusModel) Delete(id int64) error {
 		return nil
 	}
 
-	// Checking how many rows were affected
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 
-	// Check if the row was in the database before the query
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
