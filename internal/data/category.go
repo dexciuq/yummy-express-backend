@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 type Category struct {
@@ -58,7 +59,7 @@ func (c CategoryModel) GetAll() ([]*Category, error) {
 
 	rows, err := c.DB.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 
 	defer rows.Close()
@@ -70,20 +71,20 @@ func (c CategoryModel) GetAll() ([]*Category, error) {
 	for rows.Next() {
 		var category Category
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			&totalRecords,
 			&category.ID,
 			&category.Name,
 			&category.Description,
 			&category.Image,
 		)
 		if err != nil {
-			return nil, err // Update this to return an empty Metadata struct.
+			return nil, err
 		}
 		categories = append(categories, &category)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 	return categories, nil
 }
@@ -92,12 +93,12 @@ func (c CategoryModel) Get(id int64) (*Category, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-	// Define the SQL query for retrieving the movie data.
+
 	query := `
 		SELECT id, name, description, image
 		FROM categories
 		WHERE id = $1`
-	// Declare a Movie struct to hold the data returned by the query.
+
 	var category Category
 	err := c.DB.QueryRow(query, id).Scan(
 		&category.ID,
@@ -141,13 +142,11 @@ func (c CategoryModel) Delete(id int64) error {
 		return nil
 	}
 
-	// Checking how many rows were affected
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 
-	// Check if the row was in the database before the query
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}

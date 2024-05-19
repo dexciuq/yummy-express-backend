@@ -2,9 +2,10 @@ package main
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
-	"net/http"
 )
 
 func (app *application) addCategoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +73,7 @@ func (app *application) showCategoryHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
-	// using envelope
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"category": category}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

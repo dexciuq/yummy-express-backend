@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 type Country struct {
@@ -62,7 +63,7 @@ func (c CountryModel) GetAll() ([]*Country, error) {
 
 	rows, err := c.DB.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 
 	defer rows.Close()
@@ -74,19 +75,19 @@ func (c CountryModel) GetAll() ([]*Country, error) {
 	for rows.Next() {
 		var country Country
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			&totalRecords,
 			&country.ID,
 			&country.Name,
 			&country.Description,
 		)
 		if err != nil {
-			return nil, err // Update this to return an empty Metadata struct.
+			return nil, err
 		}
 		countries = append(countries, &country)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 	return countries, nil
 }
@@ -95,12 +96,12 @@ func (c CountryModel) Get(id int64) (*Country, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-	// Define the SQL query for retrieving the movie data.
+
 	query := `
 		SELECT id, name, description, alpha2, alpha3
 		FROM countries
 		WHERE id = $1`
-	// Declare a Movie struct to hold the data returned by the query.
+
 	var country Country
 	err := c.DB.QueryRow(query, id).Scan(
 		&country.ID,
@@ -146,13 +147,11 @@ func (c CountryModel) Delete(id int64) error {
 		return nil
 	}
 
-	// Checking how many rows were affected
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 
-	// Check if the row was in the database before the query
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}

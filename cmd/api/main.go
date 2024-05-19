@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
 	"github.com/dexciuq/yummy-express-backend/internal/data"

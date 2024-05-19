@@ -2,21 +2,16 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"github.com/dexciuq/yummy-express-backend/internal/data"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"math"
 	"net/http"
-	"strings"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/data"
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 func (app *application) addOrderHandler(w http.ResponseWriter, r *http.Request) {
-	authorizationHeader := r.Header.Get("Authorization")
-	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
-	accessTokenMap, _ := data.DecodeAccessToken(accessToken)
-
-	userId := accessTokenMap["user_id"].(float64)
+	userId := app.getUserIDFromHeader(w, r)
 
 	type product struct {
 		ID     int64   `json:"id"`
@@ -92,10 +87,7 @@ func (app *application) listOrdersHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) listUserOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	authorizationHeader := r.Header.Get("Authorization")
-	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
-	accessTokenMap, err := data.DecodeAccessToken(accessToken)
-	userId := accessTokenMap["user_id"].(float64)
+	userId := app.getUserIDFromHeader(w, r)
 
 	orders, err := app.models.Orders.GetAllForUser(int(userId))
 	if err != nil {
@@ -114,7 +106,6 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		app.notFoundResponse(w, r)
 	}
-	fmt.Println("order_id: ", id)
 
 	order, err := app.models.Orders.Get(id)
 	if err != nil {
@@ -172,13 +163,9 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 			Amount:      item.Quantity,
 			Subtotal:    item.Total,
 		}
-		fmt.Println("order_id", order.ID, "subtotal", productItem.Subtotal, "item.total", item.Total)
 		productItems = append(productItems, productItem)
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
-	// using envelope
-	fmt.Println("order:", order)
-	fmt.Println("order_items:", productItems)
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"order": order, "order_items": productItems}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

@@ -2,9 +2,10 @@ package main
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
-	"net/http"
 )
 
 func (app *application) addCountryHandler(w http.ResponseWriter, r *http.Request) {
@@ -74,8 +75,7 @@ func (app *application) showCountryHandler(w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
-	// using envelope
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"country": country}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
@@ -245,27 +244,22 @@ func (app *application) authenticateUserHandler(w http.ResponseWriter, r *http.R
 		HttpOnly: true,
 		MaxAge:   30 * 24 * 60 * 60,
 	}
-	fmt.Println("Autorization tokens time")
-	fmt.Println("Access token")
+
 	accessTokenMap, _ := data.DecodeAccessToken(token.AccessToken)
 	exp := int64(accessTokenMap["exp"].(float64))
 	expUnix := time.Unix(exp, 0)
-	fmt.Println(exp, reflect.TypeOf(exp))
-	fmt.Println(expUnix, reflect.TypeOf(expUnix))
-	fmt.Println(time.Now().After(expUnix), time.Now())
+
 	if time.Now().After(expUnix) {
-		fmt.Println("token expired")
+		fmt.Println("access token expired")
 		//				app.errorResponse(w, r, http.StatusUnauthorized, "access token was expired")
 	}
-	fmt.Println("Refresh token")
+
 	refreshTokenMap, _ := data.DecodeRefreshToken(token.RefreshToken)
 	exp = int64(refreshTokenMap["exp"].(float64))
 	expUnix = time.Unix(exp, 0)
-	fmt.Println(exp, reflect.TypeOf(exp))
-	fmt.Println(expUnix, reflect.TypeOf(expUnix))
-	fmt.Println(time.Now().After(expUnix), time.Now())
+
 	if time.Now().After(expUnix) {
-		fmt.Println("token expired")
+		fmt.Println("refresh token expired")
 		//				app.errorResponse(w, r, http.StatusUnauthorized, "access token was expired")
 	}
 	fmt.Println("-------------------------------")
@@ -283,15 +277,15 @@ func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	refreshToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
-	fmt.Println("Refreshing access token, refresh token:", refreshToken)
+
 	accessToken, err := app.models.Tokens.RefreshAccessToken(refreshToken)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrTokenExpired):
-			fmt.Println("Refresh/maybe token expired")
+			//			fmt.Println("Refresh/maybe token expired")
 			app.errorResponse(w, r, http.StatusUnauthorized, "Refresh/maybe token expired")
 		default:
-			fmt.Println("Not refresh/maybe token expired")
+			//			fmt.Println("Not refresh/maybe token expired")
 			app.serverErrorResponse(w, r, err)
 		}
 		return
@@ -306,24 +300,8 @@ func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) getUserInformationByToken(w http.ResponseWriter, r *http.Request) {
-	authorizationHeader := r.Header.Get("Authorization")
-	if authorizationHeader == "" {
-		app.UserUnauthorizedResponse(w, r)
-	}
+	userId := app.getUserIDFromHeader(w, r)
 
-	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
-
-	if accessToken == "" {
-		app.UserUnauthorizedResponse(w, r)
-	}
-
-	accessTokenMap, err := data.DecodeAccessToken(accessToken)
-
-	if err != nil {
-		app.UserUnauthorizedResponse(w, r)
-	}
-
-	userId := accessTokenMap["user_id"].(float64)
 	user, err := app.models.Users.GetById(int64(userId))
 
 	if err != nil {
@@ -342,15 +320,7 @@ func (app *application) getUserInformationByToken(w http.ResponseWriter, r *http
 }
 
 func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
-	authorizationHeader := r.Header.Get("Authorization")
-	accessToken := strings.TrimPrefix(authorizationHeader, "Bearer ")
-
-	accessTokenMap, err := data.DecodeAccessToken(accessToken)
-	if err != nil {
-		app.UserUnauthorizedResponse(w, r)
-	}
-
-	userId := accessTokenMap["user_id"].(float64)
+	userId := app.getUserIDFromHeader(w, r)
 
 	token, err := app.models.Tokens.FindTokenByUserId(int64(userId))
 	if err != nil {
@@ -367,8 +337,11 @@ func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request
 		MaxAge: -1,
 	}
 	http.SetCookie(w, &logoutCookie)
-	app.writeJSON(w, http.StatusOK, envelope{"message": "you was successfully logouted"}, nil)
 
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "you was successfully logouted"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) showUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -493,10 +466,8 @@ func (app *application) requestPasswordResetHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Validate the email
 	v := validator.New()
-	v.Check(validator.Matches(input.Email, validator.EmailRX), "email", "must be a valid email address")
-
+	data.ValidateEmail(v, input.Email)
 	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
@@ -662,15 +633,16 @@ func (app *application) resetPasswordHandler(w http.ResponseWriter, r *http.Requ
 		}
 		return
 	}
-	if input.NewPassword != "" {
-		user.Password.Set(input.NewPassword)
+
+	v := validator.New()
+	data.ValidatePasswordPlaintext(v, input.NewPassword)
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
 	}
 
-	//err = app.models.Users.UpdateUserPassword(resetCode.User_ID, input.NewPassword)
-	//if err != nil {
-	//	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	//	return
-	//}
+	user.Password.Set(input.NewPassword)
+
 	err = app.models.Users.Update(user)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

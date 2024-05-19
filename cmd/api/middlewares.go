@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/data"
 )
 
 func (app *application) authMiddleware(next http.HandlerFunc) http.HandlerFunc {

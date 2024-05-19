@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"time"
+
+	"github.com/dexciuq/yummy-express-backend/internal/validator"
 )
 
 type Discount struct {
@@ -56,8 +57,6 @@ func (d DiscountModel) Insert(discount *Discount) error {
 }
 
 func (d DiscountModel) GetAll() ([]*Discount, error) {
-	// Update the SQL query to include the window function which counts the total
-	// (filtered) records.
 	query := `SELECT id, name, description, discount_percent, created_at, started_at, ended_at
 		FROM discounts`
 
@@ -67,7 +66,7 @@ func (d DiscountModel) GetAll() ([]*Discount, error) {
 
 	rows, err := d.DB.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 
 	defer rows.Close()
@@ -79,7 +78,7 @@ func (d DiscountModel) GetAll() ([]*Discount, error) {
 	for rows.Next() {
 		var discount Discount
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			&totalRecords,
 			&discount.ID,
 			&discount.Name,
 			&discount.Description,
@@ -89,13 +88,13 @@ func (d DiscountModel) GetAll() ([]*Discount, error) {
 			&discount.EndedAt,
 		)
 		if err != nil {
-			return nil, err // Update this to return an empty Metadata struct.
+			return nil, err
 		}
 		discounts = append(discounts, &discount)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 	return discounts, nil
 }
@@ -104,12 +103,12 @@ func (d DiscountModel) Get(id int64) (*Discount, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-	// Define the SQL query for retrieving the movie data.
+
 	query := `
 		SELECT id, name, description, discount_percent, created_at, started_at, ended_at
 		FROM discounts
 		WHERE id = $1`
-	// Declare a Movie struct to hold the data returned by the query.
+
 	var discount Discount
 	err := d.DB.QueryRow(query, id).Scan(
 		&discount.ID,
@@ -159,13 +158,11 @@ func (d DiscountModel) Delete(id int64) error {
 		return nil
 	}
 
-	// Checking how many rows were affected
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 
-	// Check if the row was in the database before the query
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
