@@ -3,13 +3,18 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
 	"github.com/dexciuq/yummy-express-backend/internal/data"
@@ -50,19 +55,15 @@ type application struct {
 	wg     sync.WaitGroup
 }
 
-func getEnvVar(key string) string {
-	return os.Getenv(key)
-}
-
 func main() {
 	godotenv.Load()
 
 	var cfg config
-	flag.IntVar(&cfg.port, "port", 8080, "API server port")
-	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
+	flag.IntVar(&cfg.port, "port", getInt("PORT"), "API server port")
+	flag.StringVar(&cfg.env, "env", os.Getenv("ENVIRONMENT"), "Environment (development|staging|production)")
 
 	// GetById the database connection string, aka data source name (DSN)
-	flag.StringVar(&cfg.db.dsn, "db-dsn", getEnvVar("DSN"), "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", getDSN(), "PostgreSQL DSN")
 
 	// Set up restrictions for the database connections
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -75,13 +76,11 @@ func main() {
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 
 	// Google smtp-server connection
-	smtp_mail := os.Getenv("mail")
-	smtp_sender := fmt.Sprintf("Yummy Express <%s>", smtp_mail)
-	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.office365.com", "SMTP host")
-	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
-	flag.StringVar(&cfg.smtp.username, "smtp-username", smtp_mail, "SMTP username")
-	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("password_mail"), "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", smtp_sender, "SMTP sender")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", os.Getenv("SMTP_HOST"), "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", getInt("SMTP_PORT"), "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("SMTP_PASSWORD"), "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", os.Getenv("SMTP_SENDER"), "SMTP sender")
 
 	flag.Parse()
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
@@ -117,6 +116,21 @@ func main() {
 	}
 }
 
+func getDSN() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"))
+}
+
+func getInt(key string) int {
+	s := os.Getenv(key)
+	value, _ := strconv.Atoi(s)
+	return value
+}
+
 func openDB(cfg config) (*sql.DB, error) {
 	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
@@ -132,11 +146,21 @@ func openDB(cfg config) (*sql.DB, error) {
 	}
 	db.SetConnMaxIdleTime(duration)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	err = db.PingContext(ctx)
 
+	err = db.PingContext(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.New("file://./migrations", cfg.db.dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(migrate.ErrNoChange, err) {
 		return nil, err
 	}
 

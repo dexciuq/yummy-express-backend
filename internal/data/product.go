@@ -420,7 +420,7 @@ func (p ProductModel) Init() error {
 			},
 			{
 				Name:        "Cucumber",
-				Price:       23000,
+				Price:       50000,
 				Description: "Crunchy and hydrating cucumbers, prized for their refreshing taste and versatility. Fresh cucumbers are a low-calorie, nutrient-packed addition to your meals. Enjoy them sliced in salads, pickled for a tangy snack, or add a crisp touch to your water. With their high water content, cucumbers are perfect for staying hydrated while savoring a delightful, cool crunch.",
 				CategoryID:  3,
 				UPC:         "12312312",
