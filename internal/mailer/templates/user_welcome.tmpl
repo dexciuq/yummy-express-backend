@@ -4,7 +4,7 @@ Yummy Express
 Welcome, {{.name}}!
 Thanks for trying {{.email}}. You have provided this email address to log in to your account in "Yummy Express". To activate your account, just click following button:
 If you’re having trouble with the button above, copy and paste the URL below into your web browser.
-localhost:8080/v1/users/activate/{{.uuid}}
+46.101.154.239:8080/v1/users/activate/{{.uuid}}
 {{end}}
 {{define "htmlBody"}}
 <!DOCTYPE html>
@@ -78,11 +78,11 @@ localhost:8080/v1/users/activate/{{.uuid}}
 
                                     <p style="color:#4a5566;margin-top:20px;margin-bottom:20px;margin-right:0;margin-left:0;font-size:16px;line-height:28px;" >Thanks for trying {{.email}}. You have provided this email address to log in to your account in "Yummy Express". To activate your account, just click following button:</p>
 
-                                  <a href="http://localhost:8080/v1/auth/activate/{{.uuid}}"><button style="border-radius: 4px; padding: 8px 28px;font-size: 16px;background-color:#5FCC55;border:white;color:white;font-family:'Inter', Helvetica, Arial, sans-serif;">Activate</button></a>
+                                  <a href="http://46.101.154.239:8080/v1/auth/activate/{{.uuid}}"><button style="border-radius: 4px; padding: 8px 28px;font-size: 16px;background-color:#5FCC55;border:white;color:white;font-family:'Inter', Helvetica, Arial, sans-serif;">Activate</button></a>
 
 
                                     <p class="small" style="color:#4a5566;margin-top:20px;margin-bottom:20px;margin-right:0;margin-left:0;font-size:14px;line-height:21px;" >If you’re having trouble with the button above, copy and paste the URL below into your web browser.</p>
-                                    <p class="small" style="color:#4a5566;margin-top:20px;margin-bottom:20px;margin-right:0;margin-left:0;font-size:14px;line-height:21px;" ><a href="http://localhost:8080/v1/auth/activate/{{.uuid}}">http://localhost:8080/v1/auth/activate/{{.uuid}}</a></p>
+                                    <p class="small" style="color:#4a5566;margin-top:20px;margin-bottom:20px;margin-right:0;margin-left:0;font-size:14px;line-height:21px;" ><a href="http://46.101.154.239:8080/v1/auth/activate/{{.uuid}}">http://46.101.154.239:8080/v1/auth/activate/{{.uuid}}</a></p>
 
                                 </td>
                             </tr>
