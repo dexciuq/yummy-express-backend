@@ -4,14 +4,19 @@ services:
   db:
     image: postgres:latest
     container_name: db
-    ports:
-      - "${DB_PORT}:${DB_PORT}"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - local-network
 
   app:
     build:
@@ -21,7 +26,8 @@ services:
     ports:
       - "${PORT}:${PORT}"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - PORT=${PORT}
       - ENVIRONMENT=${ENVIRONMENT}
@@ -37,6 +43,13 @@ services:
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_SENDER=${SMTP_SENDER}
+    networks:
+      - local-network
+
+
+networks:
+  local-network:
+    driver: bridge
 
 volumes:
   postgres-data:
