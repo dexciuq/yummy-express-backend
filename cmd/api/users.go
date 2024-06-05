@@ -483,7 +483,7 @@ func (app *application) requestPasswordResetHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	code, err := data.GenerateResetCode()
+	code, err := data.GenerateResetCode(user)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -539,64 +539,6 @@ func (app *application) verifyResetCodeHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Code is valid"}, nil)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-	}
-}
-
-func (app *application) setNewPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Code        string `json:"code"`
-		NewPassword string `json:"new_password"`
-	}
-
-	err := app.readJSON(w, r, &input)
-	if err != nil {
-		app.badRequestResponse(w, r, err)
-		return
-	}
-
-	resetCode, err := app.models.Users.ValidatePasswordResetCode(input.Code)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	if resetCode == nil || time.Now().After(resetCode.ExpiresAt) {
-		app.invalidCredentialsResponse(w, r)
-		return
-	}
-
-	user, err := app.models.Users.GetById(resetCode.User_ID)
-	if err != nil {
-		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
-		default:
-			app.serverErrorResponse(w, r, err)
-		}
-		return
-	}
-
-	err = user.Password.Set(input.NewPassword)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	err = app.models.Users.Update(user)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	err = app.models.Users.DeletePasswordResetCode(input.Code)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Password has been reset successfully"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

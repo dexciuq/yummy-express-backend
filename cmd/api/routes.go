@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 )
 
 func (app *application) routes() http.Handler {
@@ -83,5 +84,12 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/orders/:id", app.deleteOrderHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/orders/:id", app.updateOrderHandler)
 
-	return router
+	// Enable CORS
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:5173"},
+		AllowedMethods: []string{"GET", "POST", "PATCH", "DELETE"},
+		AllowedHeaders: []string{"Content-Type"},
+	})
+
+	return c.Handler(router)
 }

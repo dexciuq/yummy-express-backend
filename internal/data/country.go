@@ -79,6 +79,8 @@ func (c CountryModel) GetAll() ([]*Country, error) {
 			&country.ID,
 			&country.Name,
 			&country.Description,
+			&country.Alpha2,
+			&country.Alpha3,
 		)
 		if err != nil {
 			return nil, err

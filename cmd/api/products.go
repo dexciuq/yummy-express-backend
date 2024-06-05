@@ -75,7 +75,7 @@ func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Reque
 
 	qs := r.URL.Query()
 	input.Name = app.readString(qs, "name", "")
-	fmt.Println(input.Name)
+	//	fmt.Println("Input product name:", input.Name)
 	input.CategoryID = app.readInt(qs, "category", 0)
 	input.BrandIDs = app.readIntArray(qs, "brand", []int{})
 	input.CountryID = app.readInt(qs, "country", 0)
