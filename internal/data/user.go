@@ -202,7 +202,7 @@ func (m UserModel) ValidatePasswordResetCode(code string) (*PasswordResetCode, e
 	err := m.DB.QueryRow(query, code).Scan(&resetCode.User_ID, &resetCode.ExpiresAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
