@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/dexciuq/yummy-express-backend/internal/data"
 	"github.com/dexciuq/yummy-express-backend/internal/validator"
 	"net/http"
@@ -74,7 +73,7 @@ func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Reque
 	// v := validator.New()
 	qs := r.URL.Query()
 	input.Name = app.readString(qs, "name", "")
-	fmt.Println(input.Name)
+	//	fmt.Println("Input product name:", input.Name)
 	input.CategoryID = app.readInt(qs, "category", 0)
 	input.BrandIDs = app.readIntArray(qs, "brand", []int{})
 	input.CountryID = app.readInt(qs, "country", 0)

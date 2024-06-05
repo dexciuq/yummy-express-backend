@@ -58,7 +58,7 @@ func (d DiscountModel) Insert(discount *Discount) error {
 func (d DiscountModel) GetAll() ([]*Discount, error) {
 	// Update the SQL query to include the window function which counts the total
 	// (filtered) records.
-	query := `SELECT id, name, description, discount_percent, created_at, started_at, ended_at
+	query := `SELECT count(*) OVER(), id, name, description, discount_percent, created_at, started_at, ended_at
 		FROM discounts`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

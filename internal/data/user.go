@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -223,13 +224,14 @@ func (m UserModel) DeletePasswordResetCode(code string) error {
 }
 
 // GenerateResetCode generates a secure random reset code.
-func GenerateResetCode() (string, error) {
+func GenerateResetCode(user *User) (string, error) {
 	code := make([]byte, 6)
 	_, err := rand.Read(code)
 	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(code), nil
+	encodedStr := hex.EncodeToString(code)
+	return fmt.Sprintf("%s%d", encodedStr, user.ID), nil
 }
 
 func (u UserModel) Update(user *User) error {
