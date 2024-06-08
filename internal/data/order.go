@@ -19,6 +19,18 @@ type Order struct {
 	DeliveredAt time.Time `json:"delivered_at"`
 }
 
+type OrderDB struct {
+	ID                int64     `json:"id"`
+	UserID            int64     `json:"user_id"`
+	Total             int64     `json:"total"`
+	Address           string    `json:"address"`
+	StatusID          int64     `json:"status_id"`
+	CreatedAt         time.Time `json:"created_at"`
+	DeliveredAt       time.Time `json:"delivered_at"`
+	StatusName        string    `json:"status_name"`
+	StatusDescription string    `json:"status_description"`
+}
+
 type OrderModel struct {
 	DB *sql.DB
 }
@@ -58,30 +70,39 @@ func (o OrderModel) Insert(order *Order) error {
 	return nil
 }
 
-func (o OrderModel) GetAll() ([]*Order, error) {
-	// Update the SQL query to include the window function which counts the total
-	// (filtered) records.
-	query := `SELECT count(*) OVER(), id, user_id, total, address, status_id, created_at, delivered_at FROM orders`
+func (o OrderModel) GetAll() ([]*OrderDB, error) {
+	query := `
+		SELECT 
+			count(*) OVER(), 
+			o.id, 
+			o.user_id, 
+			o.total, 
+			o.address, 
+			o.status_id, 
+			o.created_at, 
+			o.delivered_at,
+			s.name AS status_name,
+			s.description AS status_description
+		FROM orders o
+		INNER JOIN statuses s ON o.status_id = s.id
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-
 	defer cancel()
 
 	rows, err := o.DB.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
-
 	defer rows.Close()
 
 	totalRecords := 0
-
-	orders := []*Order{}
+	orders := []*OrderDB{}
 
 	for rows.Next() {
-		var order Order
+		var order OrderDB
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			&totalRecords,
 			&order.ID,
 			&order.UserID,
 			&order.Total,
@@ -89,43 +110,55 @@ func (o OrderModel) GetAll() ([]*Order, error) {
 			&order.StatusID,
 			&order.CreatedAt,
 			&order.DeliveredAt,
+			&order.StatusName,
+			&order.StatusDescription,
 		)
 		if err != nil {
-			return nil, err // Update this to return an empty Metadata struct.
+			return nil, err
 		}
 		orders = append(orders, &order)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 	return orders, nil
 }
 
-func (o OrderModel) GetAllForUser(id int) ([]*Order, error) {
-	// Update the SQL query to include the window function which counts the total
-	// (filtered) records.
-	query := `SELECT count(*) OVER(), id, user_id, total, address, status_id, created_at, delivered_at FROM orders where user_id = $1`
+func (o OrderModel) GetAllForUser(id int) ([]*OrderDB, error) {
+	query := `
+		SELECT 
+			count(*) OVER(), 
+			o.id, 
+			o.user_id, 
+			o.total, 
+			o.address, 
+			o.status_id, 
+			o.created_at, 
+			o.delivered_at,
+			s.name AS status_name,
+			s.description AS status_description
+		FROM orders o
+		INNER JOIN statuses s ON o.status_id = s.id
+		WHERE o.user_id = $1
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-
 	defer cancel()
 
 	rows, err := o.DB.QueryContext(ctx, query, id)
 	if err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
-
 	defer rows.Close()
 
 	totalRecords := 0
-
-	orders := []*Order{}
+	orders := []*OrderDB{}
 
 	for rows.Next() {
-		var order Order
+		var order OrderDB
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			&totalRecords,
 			&order.ID,
 			&order.UserID,
 			&order.Total,
@@ -133,15 +166,17 @@ func (o OrderModel) GetAllForUser(id int) ([]*Order, error) {
 			&order.StatusID,
 			&order.CreatedAt,
 			&order.DeliveredAt,
+			&order.StatusName,
+			&order.StatusDescription,
 		)
 		if err != nil {
-			return nil, err // Update this to return an empty Metadata struct.
+			return nil, err
 		}
 		orders = append(orders, &order)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err // Update this to return an empty Metadata struct.
+		return nil, err
 	}
 	return orders, nil
 }
@@ -165,6 +200,46 @@ func (o OrderModel) Get(id int64) (*Order, error) {
 		&order.StatusID,
 		&order.CreatedAt,
 		&order.DeliveredAt,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &order, nil
+}
+
+func (o OrderModel) GetDB(id int64) (*OrderDB, error) {
+	query := `
+		SELECT 
+			o.id, 
+			o.user_id, 
+			o.total, 
+			o.address, 
+			o.status_id, 
+			o.created_at, 
+			o.delivered_at,
+			s.name AS status_name,
+			s.description AS status_description
+		FROM orders o
+		INNER JOIN statuses s ON o.status_id = s.id
+		WHERE o.id = $1
+	`
+
+	var order OrderDB
+	err := o.DB.QueryRow(query, id).Scan(
+		&order.ID,
+		&order.UserID,
+		&order.Total,
+		&order.Address,
+		&order.StatusID,
+		&order.CreatedAt,
+		&order.DeliveredAt,
+		&order.StatusName,
+		&order.StatusDescription,
 	)
 	if err != nil {
 		switch {

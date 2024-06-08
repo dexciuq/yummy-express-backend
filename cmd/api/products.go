@@ -223,8 +223,8 @@ func (app *application) updateProductHandler(w http.ResponseWriter, r *http.Requ
 		Description *string  `json:"description"`
 		CategoryID  *int64   `json:"category_id"`
 		UPC         *string  `json:"upc"`
-		DiscountID  *int64   `json:"-"`
-		Quantity    *int64   `json:"-"`
+		DiscountID  *int64   `json:"discount_id"`
+		Quantity    *int64   `json:"quantity"`
 		UnitID      *int64   `json:"unit_id"`
 		Image       *string  `json:"image"`
 		BrandID     *int64   `json:"brand_id"`

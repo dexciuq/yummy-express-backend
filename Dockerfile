@@ -8,6 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Build the Go application
+RUN go mod tidy
 RUN go build -o app ./cmd/api
 
 # Expose the port that your application listens on

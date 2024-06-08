@@ -63,6 +63,13 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/roles/:id", app.deleteRoleHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/roles/:id", app.updateRoleHandler)
 
+	//statuses
+	router.HandlerFunc(http.MethodPost, "/v1/statuses", app.addStatusHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/statuses", app.listStatusesHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/statuses/:id", app.showStatusHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/statuses/:id", app.deleteStatusHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/statuses/:id", app.updateStatusHandler)
+
 	router.HandlerFunc(http.MethodPost, "/v1/auth/register", app.registerUserHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/auth/authenticate", app.authenticateUserHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/auth/logout", app.authMiddleware(app.logoutUserHandler))
@@ -84,6 +91,9 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/orders/:id", app.showOrderHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/orders/:id", app.deleteOrderHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/orders/:id", app.updateOrderHandler)
+
+	//order-items
+	router.HandlerFunc(http.MethodPatch, "/v1/order-items/:id", app.updateOrderItemHandler)
 
 	// Enable CORS
 	c := cors.New(cors.Options{
