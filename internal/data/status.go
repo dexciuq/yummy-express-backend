@@ -158,12 +158,24 @@ func (s StatusModel) Init() error {
 	if count == 0 {
 		statuses := []*Status{
 			{
-				Name:        "Order accepted",
-				Description: "Order accepted",
+				Name:        "Ordered",
+				Description: "The order has been successfully placed by the customer.",
+			},
+			{
+				Name:        "Processing",
+				Description: "The order is being prepared, which may include packaging and other necessary preparations.",
+			},
+			{
+				Name:        "Shipped",
+				Description: "The order has been dispatched from the warehouse and is on its way.",
 			},
 			{
 				Name:        "Delivered",
-				Description: "Delivered",
+				Description: "The order has been successfully delivered to the customer.",
+			},
+			{
+				Name:        "Cancelled",
+				Description: "The order has been cancelled by either the customer or the seller.",
 			},
 		}
 
