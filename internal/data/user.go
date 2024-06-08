@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -290,5 +291,60 @@ func (u UserModel) Delete(id int64) error {
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
+	return nil
+}
+
+func (u UserModel) Init() error {
+	var count int
+	err := u.DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		fmt.Println("Initing admin")
+		roleModel := RoleModel{DB: u.DB}
+		adminRoleID := roleModel.GetAdminRoleID()
+
+		if adminRoleID == 0 {
+			return errors.New("admin role not found")
+		}
+
+		user := &User{
+			FirstName:   "Admin",
+			LastName:    "Adminov",
+			PhoneNumber: "87777777777",
+			Email:       os.Getenv("SMTP_USERNAME"),
+			Role_ID:     adminRoleID,
+		}
+
+		err = user.Password.Set(os.Getenv("SMTP_PASSWORD"))
+		if err != nil {
+			return err
+		}
+
+		query := `
+            INSERT INTO users (firstname, lastname, phone_number, email, password_hash, role_id, is_activated)
+            VALUES ($1, $2, $3, $4, $5, $6, true)
+            RETURNING id, created_at`
+
+		args := []any{user.FirstName, user.LastName, user.PhoneNumber, user.Email, user.Password.hash, user.Role_ID}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		err := u.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.CreatedAt)
+
+		if err != nil {
+			switch {
+			case err.Error() == `pq: повторяющееся значение ключа нарушает ограничение уникальности "users_email_key"` || err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
+				return ErrDuplicateEmail
+			default:
+				return err
+			}
+		}
+		return nil
+	}
+
 	return nil
 }

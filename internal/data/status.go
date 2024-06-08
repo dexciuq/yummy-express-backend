@@ -21,7 +21,7 @@ type StatusModel struct {
 
 func ValidateStatus(v *validator.Validator, status *Status) {
 	v.Check(status.Name != "", "name", "must be provided")
-	v.Check(len(status.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(status.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(status.Description != "", "description", "must be provided")
 }
 

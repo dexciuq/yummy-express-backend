@@ -110,6 +110,7 @@ func main() {
 	app.models.Products.Init()
 	app.models.Roles.Init()
 	app.models.Statuses.Init()
+	//app.models.Users.Init()
 
 	err = app.serve()
 	if err != nil {

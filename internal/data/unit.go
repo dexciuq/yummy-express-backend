@@ -21,7 +21,7 @@ type UnitModel struct {
 
 func ValidateUnit(v *validator.Validator, unit *Unit) {
 	v.Check(unit.Name != "", "name", "must be provided")
-	v.Check(len(unit.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(unit.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(unit.Description != "", "description", "must be provided")
 }
 

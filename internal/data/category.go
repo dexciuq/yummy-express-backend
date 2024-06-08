@@ -22,7 +22,7 @@ type CategoryModel struct {
 
 func ValidateCategory(v *validator.Validator, category *Category) {
 	v.Check(category.Name != "", "name", "must be provided")
-	v.Check(len(category.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(category.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(category.Description != "", "description", "must be provided")
 }
 

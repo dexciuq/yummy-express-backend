@@ -67,10 +67,11 @@ type ProductModel struct {
 
 func ValidateProduct(v *validator.Validator, product *Product) {
 	v.Check(product.Name != "", "name", "must be provided")
-	v.Check(len(product.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(product.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(product.Price >= 0, "price", "can not be negative")
 	v.Check(product.Description != "", "description", "must be provided")
 	v.Check(product.Quantity >= 0, "quantity", "can not be negative")
+	v.Check(product.Step >= 0, "step", "can not be negative")
 }
 
 func (p ProductModel) Insert(product *Product) error {
@@ -136,6 +137,97 @@ func (p ProductModel) GetAll(category int, brand []int, country int, name string
 	defer cancel()
 
 	args := []any{"%" + name + "%", category, pq.Array(brand), country, filters.limit(), filters.offset()}
+
+	rows, err := p.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, Metadata{}, err // Update this to return an empty Metadata struct.
+	}
+
+	defer rows.Close()
+
+	totalRecords := 0
+
+	var products []*productDB
+
+	for rows.Next() {
+		var product productDB
+		err := rows.Scan(
+			&totalRecords, // Scan the count from the window function into totalRecords.
+			&product.ID,
+			&product.Name,
+			&product.Price,
+			&product.Description,
+			&product.UPC,
+			&product.Quantity,
+			&product.Image,
+			&product.Step,
+			&product.CategoryID,
+			&product.CategoryName,
+			&product.CategoryDescription,
+			&product.CategoryImage,
+			&product.DiscountID,
+			&product.DiscountName,
+			&product.DiscountDescription,
+			&product.DiscountPercent,
+			&product.DiscountCreatedAt,
+			&product.DiscountStartedAt,
+			&product.DiscountEndedAt,
+			&product.UnitID,
+			&product.UnitName,
+			&product.UnitDescription,
+			&product.BrandID,
+			&product.BrandName,
+			&product.BrandDescription,
+			&product.CountryID,
+			&product.CountryName,
+			&product.CountryDescription,
+			&product.Alpha2,
+			&product.Alpha3,
+		)
+		if err != nil {
+			return nil, Metadata{}, err // Update this to return an empty Metadata struct.
+		}
+		products = append(products, &product)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, Metadata{}, err // Update this to return an empty Metadata struct.
+	}
+	// Generate a Metadata struct, passing in the total record count and pagination
+	// parameters from the client.
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	// Include the metadata struct when returning.
+	return products, metadata, nil
+}
+
+func (p ProductModel) GetAllWithDiscounts(category int, brands, discounts []int, country int, name string, filters Filters) ([]*productDB, Metadata, error) {
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(), 
+			products.id, products.name, products.price, products.description, products.upc, products.quantity, products.image, products.step,
+			categories.id, categories.name, categories.description, categories.image, 
+			discounts.id, discounts.name, discounts.description, discounts.discount_percent, discounts.created_at, discounts.started_at, discounts.ended_at,
+			units.id, units.name, units.description,
+			brands.id, brands.name, brands.description,
+			countries.id, countries.name, countries.description, countries.alpha2, countries.alpha3
+		FROM products
+	    LEFT JOIN categories ON products.category_id = categories.id
+		LEFT JOIN discounts ON products.discount_id = discounts.id
+		LEFT JOIN units ON products.unit_id = units.id
+		LEFT JOIN brands ON products.brand_id = brands.id
+		LEFT JOIN countries ON products.country_id = countries.id
+		WHERE LOWER(products.name) LIKE LOWER($1)/*(to_tsvector('simple', products.name) @@ plainto_tsquery('simple', $1) OR $1 = '')*/
+		AND (products.category_id = $2 OR $2 = 0)
+  		AND (brand_id = ANY($3) OR COALESCE(array_length($3, 1), 0) = 0)
+  		AND (discount_id = ANY($4) OR COALESCE(array_length($4, 1), 0) = 0)
+		AND (products.country_id = $5 OR $5 = 0)
+		ORDER BY %s %s, products.id ASC
+		LIMIT $6 OFFSET $7`, filters.sortColumn(), filters.sortDirection())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	defer cancel()
+
+	args := []any{"%" + name + "%", category, pq.Array(brands), pq.Array(discounts), country, filters.limit(), filters.offset()}
 
 	rows, err := p.DB.QueryContext(ctx, query, args...)
 	if err != nil {

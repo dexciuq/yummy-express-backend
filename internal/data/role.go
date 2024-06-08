@@ -21,7 +21,7 @@ type RoleModel struct {
 
 func ValidateRole(v *validator.Validator, role *Role) {
 	v.Check(role.Name != "", "name", "must be provided")
-	v.Check(len(role.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(role.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(role.Description != "", "description", "must be provided")
 }
 
@@ -111,6 +111,29 @@ func (r RoleModel) Get(id int64) (*Role, error) {
 		}
 	}
 	return &role, nil
+}
+
+func (r RoleModel) GetAdminRoleID() (id int64) {
+	query := `
+		SELECT id, name, description
+		FROM roles
+		WHERE name = 'ADMIN';`
+
+	var role Role
+	err := r.DB.QueryRow(query).Scan(
+		&role.ID,
+		&role.Name,
+		&role.Description,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return 0
+		default:
+			return 0
+		}
+	}
+	return role.ID
 }
 
 func (r RoleModel) Update(role *Role) error {

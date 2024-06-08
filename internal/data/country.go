@@ -23,7 +23,7 @@ type CountryModel struct {
 
 func ValidateCountry(v *validator.Validator, country *Country) {
 	v.Check(country.Name != "", "name", "must be provided")
-	v.Check(len(country.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(country.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(country.Description != "", "description", "must be provided")
 	v.Check(len(country.Alpha2) == 2, "alpha2", "must be 2 bytes long")
 	v.Check(len(country.Alpha3) == 3, "alpha3", "must be 3 bytes long")

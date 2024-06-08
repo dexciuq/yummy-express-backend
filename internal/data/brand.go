@@ -21,7 +21,7 @@ type BrandModel struct {
 
 func ValidateBrand(v *validator.Validator, brand *Brand) {
 	v.Check(brand.Name != "", "name", "must be provided")
-	v.Check(len(brand.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(brand.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(brand.Description != "", "description", "must be provided")
 }
 

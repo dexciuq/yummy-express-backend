@@ -13,8 +13,9 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 
 	//products
-	router.HandlerFunc(http.MethodPost, "/v1/products", app.addProductHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/products", app.adminAuthMiddleware(app.addProductHandler))
 	router.HandlerFunc(http.MethodGet, "/v1/products", app.listProductsHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/products-wit-discount", app.listProductsWithDiscountHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/products/:id", app.showProductHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/products/:id", app.deleteProductHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/products/:id", app.updateProductHandler)
@@ -86,9 +87,9 @@ func (app *application) routes() http.Handler {
 
 	// Enable CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:5173"},
+		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "POST", "PATCH", "DELETE"},
-		AllowedHeaders: []string{"Content-Type"},
+		AllowedHeaders: []string{"*"},
 	})
 
 	return c.Handler(router)

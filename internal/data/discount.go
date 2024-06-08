@@ -25,7 +25,7 @@ type DiscountModel struct {
 
 func ValidateDiscount(v *validator.Validator, discount *Discount) {
 	v.Check(discount.Name != "", "name", "must be provided")
-	v.Check(len(discount.Name) <= 20, "name", "must not be more than 20 bytes long")
+	v.Check(len(discount.Name) <= 100, "name", "must not be more than 100 bytes long")
 	v.Check(discount.Description != "", "description", "must be provided")
 	v.Check(discount.StartedAt.Before(discount.EndedAt), "ended_at", "must be later than started_at")
 }
@@ -64,6 +64,49 @@ func (d DiscountModel) GetAll() ([]*Discount, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
+	defer cancel()
+
+	rows, err := d.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	totalRecords := 0
+
+	discounts := []*Discount{}
+
+	for rows.Next() {
+		var discount Discount
+		err := rows.Scan(
+			&totalRecords,
+			&discount.ID,
+			&discount.Name,
+			&discount.Description,
+			&discount.DiscountPercent,
+			&discount.CreatedAt,
+			&discount.StartedAt,
+			&discount.EndedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		discounts = append(discounts, &discount)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return discounts, nil
+}
+
+func (d DiscountModel) GetAllActive() ([]*Discount, error) {
+	query := `SELECT count(*) OVER(), id, name, description, discount_percent, created_at, started_at, ended_at
+		FROM discounts
+		WHERE started_at <= NOW() AND ended_at >= NOW() AND id != 1`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	rows, err := d.DB.QueryContext(ctx, query)

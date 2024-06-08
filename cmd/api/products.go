@@ -103,6 +103,56 @@ func (app *application) listProductsHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+func (app *application) listProductsWithDiscountHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		CategoryID int
+		BrandIDs   []int
+		CountryID  int
+		Name       string
+		data.Filters
+	}
+
+	qs := r.URL.Query()
+	input.Name = app.readString(qs, "name", "")
+	//	fmt.Println("Input product name:", input.Name)
+	input.CategoryID = app.readInt(qs, "category", 0)
+	input.BrandIDs = app.readIntArray(qs, "brand", []int{})
+	input.CountryID = app.readInt(qs, "country", 0)
+	input.Filters.Page = app.readInt(qs, "page", 1)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20)
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.SortSafelist = []string{"id", "name", "price",
+		"-id", "-name", "-price"}
+
+	v := validator.New()
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	discounts, err := app.models.Discount.GetAllActive()
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	discountIDs := make([]int, len(discounts))
+	for i, discount := range discounts {
+		discountIDs[i] = int(discount.ID)
+	}
+	fmt.Println("Active discounts", discountIDs)
+
+	products, metadata, err := app.models.Products.GetAllWithDiscounts(input.CategoryID, input.BrandIDs, discountIDs, input.CountryID, input.Name, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"products": products, "metadata": metadata}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) showProductHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
