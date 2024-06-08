@@ -42,7 +42,7 @@ func (app *application) updateOrderItemHandler(w http.ResponseWriter, r *http.Re
 	price := int64(float64(orderItem.Total) / orderItem.Quantity)
 	difference := int64((orderItem.Quantity - *input.Quantity) * float64(price))
 
-	if orderItem.Quantity == 0 {
+	if *input.Quantity == 0 {
 		err = app.models.OrderItems.Delete(orderItem.ID)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
@@ -50,6 +50,7 @@ func (app *application) updateOrderItemHandler(w http.ResponseWriter, r *http.Re
 		}
 	} else {
 		orderItem.Total = int64(float64(price) * (*input.Quantity))
+		orderItem.Quantity = *input.Quantity
 		err = app.models.OrderItems.Update(orderItem)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
