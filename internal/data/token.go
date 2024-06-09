@@ -13,7 +13,7 @@ import (
 
 var (
 	ErrTokenExpired    = errors.New("token was expired")
-	AccessTokenExpire  = time.Minute * 15
+	AccessTokenExpire  = time.Hour           ///time.Minute * 15
 	RefreshTokenExpire = time.Hour * 24 * 30 //time.Minute * 5
 )
 

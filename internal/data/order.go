@@ -22,6 +22,9 @@ type Order struct {
 type OrderDB struct {
 	ID                int64     `json:"id"`
 	UserID            int64     `json:"user_id"`
+	FirstName         string    `json:"firstname"`
+	LastName          string    `json:"lastname"`
+	Email             string    `json:"email"`
 	Total             int64     `json:"total"`
 	Address           string    `json:"address"`
 	StatusID          int64     `json:"status_id"`
@@ -76,6 +79,9 @@ func (o OrderModel) GetAll() ([]*OrderDB, error) {
 			count(*) OVER(), 
 			o.id, 
 			o.user_id, 
+			u.firstname,
+			u.lastname,
+			u.email,
 			o.total, 
 			o.address, 
 			o.status_id, 
@@ -84,6 +90,7 @@ func (o OrderModel) GetAll() ([]*OrderDB, error) {
 			s.name AS status_name,
 			s.description AS status_description
 		FROM orders o
+		INNER JOIN users u ON o.user_id = u.id
 		INNER JOIN statuses s ON o.status_id = s.id
 	`
 
@@ -105,6 +112,9 @@ func (o OrderModel) GetAll() ([]*OrderDB, error) {
 			&totalRecords,
 			&order.ID,
 			&order.UserID,
+			&order.FirstName,
+			&order.LastName,
+			&order.Email,
 			&order.Total,
 			&order.Address,
 			&order.StatusID,
@@ -131,6 +141,9 @@ func (o OrderModel) GetAllForUser(id int) ([]*OrderDB, error) {
 			count(*) OVER(), 
 			o.id, 
 			o.user_id, 
+			u.firstname,
+			u.lastname,
+			u.email,
 			o.total, 
 			o.address, 
 			o.status_id, 
@@ -139,6 +152,7 @@ func (o OrderModel) GetAllForUser(id int) ([]*OrderDB, error) {
 			s.name AS status_name,
 			s.description AS status_description
 		FROM orders o
+		INNER JOIN users u ON o.user_id = u.id
 		INNER JOIN statuses s ON o.status_id = s.id
 		WHERE o.user_id = $1
 	`
@@ -161,6 +175,9 @@ func (o OrderModel) GetAllForUser(id int) ([]*OrderDB, error) {
 			&totalRecords,
 			&order.ID,
 			&order.UserID,
+			&order.FirstName,
+			&order.LastName,
+			&order.Email,
 			&order.Total,
 			&order.Address,
 			&order.StatusID,
@@ -180,7 +197,6 @@ func (o OrderModel) GetAllForUser(id int) ([]*OrderDB, error) {
 	}
 	return orders, nil
 }
-
 func (o OrderModel) Get(id int64) (*Order, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
@@ -217,6 +233,9 @@ func (o OrderModel) GetDB(id int64) (*OrderDB, error) {
 		SELECT 
 			o.id, 
 			o.user_id, 
+			u.firstname,
+			u.lastname,
+			u.email,
 			o.total, 
 			o.address, 
 			o.status_id, 
@@ -226,6 +245,7 @@ func (o OrderModel) GetDB(id int64) (*OrderDB, error) {
 			s.description AS status_description
 		FROM orders o
 		INNER JOIN statuses s ON o.status_id = s.id
+		INNER JOIN users u ON o.user_id = u.id
 		WHERE o.id = $1
 	`
 
@@ -233,6 +253,9 @@ func (o OrderModel) GetDB(id int64) (*OrderDB, error) {
 	err := o.DB.QueryRow(query, id).Scan(
 		&order.ID,
 		&order.UserID,
+		&order.FirstName,
+		&order.LastName,
+		&order.Email,
 		&order.Total,
 		&order.Address,
 		&order.StatusID,

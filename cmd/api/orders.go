@@ -107,7 +107,7 @@ func (app *application) showOrderHandler(w http.ResponseWriter, r *http.Request)
 		app.notFoundResponse(w, r)
 	}
 
-	order, err := app.models.Orders.Get(id)
+	order, err := app.models.Orders.GetDB(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
